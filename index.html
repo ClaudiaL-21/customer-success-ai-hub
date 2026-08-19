@@ -67,12 +67,12 @@
     </div>
 
     <div id="filters">
-      <label>CSM: <select id="filter-csm"><option value="all">All</option></select></label>
-      <label>Region: <select id="filter-region"><option value="all">All</option><option value="EMEA">EMEA</option><option value="APAC">APAC</option><option value="Americas">Americas</option></select></label>
-      <label>Risk: <select id="filter-risk"><option value="all">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
-      <label>Expansion: <select id="filter-expansion"><option value="all">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
-      <label>Trend: <select id="filter-trend"><option value="all">All</option><option value="up">Improving</option><option value="flat">Stable</option><option value="down">Declining</option></select></label>
-      <div class="filter-search">
+      <label class="filter-csm-label">CSM: <select id="filter-csm"><option value="all">All</option></select></label>
+      <label class="filter-non-csm">Region: <select id="filter-region"><option value="all">All</option><option value="EMEA">EMEA</option><option value="APAC">APAC</option><option value="Americas">Americas</option></select></label>
+      <label class="filter-non-csm">Risk: <select id="filter-risk"><option value="all">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+      <label class="filter-non-csm">Expansion: <select id="filter-expansion"><option value="all">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+      <label class="filter-non-csm">Trend: <select id="filter-trend"><option value="all">All</option><option value="up">Improving</option><option value="flat">Stable</option><option value="down">Declining</option></select></label>
+      <div class="filter-search filter-non-csm">
         <input type="search" id="filter-search" placeholder="Search accounts…" aria-label="Search accounts by name or ID">
       </div>
       <div id="drilldown-indicator" class="drilldown-indicator" hidden></div>

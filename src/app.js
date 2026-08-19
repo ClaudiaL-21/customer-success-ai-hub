@@ -256,7 +256,8 @@ function render() {
   document.getElementById("tab-qbrs").classList.toggle("active", state.view === "qbrs");
   document.getElementById("tab-feedback").classList.toggle("active", state.view === "feedback");
   document.getElementById("tab-trust").classList.toggle("active", state.view === "trust");
-  document.getElementById("filters").style.display = (state.view === "team" || state.view === "trust" || state.view === "qbrs") ? "none" : "flex";
+  document.getElementById("filters").style.display = (state.view === "team" || state.view === "trust") ? "none" : "flex";
+  document.getElementById("filters").classList.toggle("filters-csm-only", state.view === "qbrs");
   syncDrillDownIndicator();
 
   const root = document.getElementById("app");
@@ -1389,7 +1390,7 @@ function openWebQbr(accountId) {
     presentationItems: qbr.review[s.key].presentationItems || [],
   }));
   const content = mapQbrToHtmlContent({ account: acc, sections });
-  const html = renderQbrHtml({ account: acc, content });
+  const html = renderQbrHtml({ account: acc, content, csmName: csmName(acc.csmId) });
   const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
   window.open(url, "_blank");
 }
@@ -2482,7 +2483,8 @@ function renderQbrsOverview() {
   const wrap = document.createElement("div");
   wrap.appendChild(renderViewHeader("QBRs", "Every account's QBR cadence — overdue first, then soonest upcoming. Opens straight into that account's QBR Copilot."));
 
-  const rows = state.accounts.map(acc => ({
+  const csmFiltered = state.filters.csm === "all" ? state.accounts : state.accounts.filter(a => a.csmId === state.filters.csm);
+  const rows = csmFiltered.map(acc => ({
     acc,
     overdue: daysSince(acc.relationship.lastQBRDate) > 100 && daysFromToday(acc.relationship.nextQBRDate) > 20,
     daysToNext: daysFromToday(acc.relationship.nextQBRDate),

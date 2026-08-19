@@ -3,11 +3,16 @@
 // self-contained HTML document string (own <style>, no external assets),
 // so it can be opened directly in a new tab via a Blob URL. Reuses the
 // approved CUSTOMER SUCCESS AI | HUB LIGHT design tokens (see src/styles.css)
-// rather than re-deriving a new palette.
+// and, for the icon-badge/KPI-tile/Fact-Interpretation-Recommendation card
+// language, the approved QBR visual reference (qbr-klickdummy) — hand-drawn
+// monoline SVG icons here, not copied art, since the reference is images-only.
 //
 // No new LLM call happens here or anywhere in this module — every string is
 // either a deterministic account fact or reviewed presentationText/
-// presentationItems/safeText already produced upstream.
+// presentationItems/safeText already produced upstream. Owner/Due Date/
+// Status columns from the reference's commitments table are deliberately
+// NOT reproduced — no field exists for them (same decision as the PPTX path).
+import { REFERENCE_DATE_ISO } from "./scoring.js";
 
 function escapeHtml(str) {
   return String(str ?? "")
@@ -18,16 +23,55 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+function quarterOf(dateISO) {
+  const d = new Date(dateISO);
+  const q = Math.floor(d.getUTCMonth() / 3) + 1;
+  return `Q${q} ${d.getUTCFullYear()}`;
+}
+
+// Small monoline icon set, single <path>/<circle> per glyph, currentColor
+// stroke — stylistically consistent with the approved reference, not traced
+// from it (the reference is flattened PNG slides, nothing to trace).
+const ICON = {
+  trendUp: '<path d="M4 16l5-5 4 4 7-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  users: '<circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 20c0-3.3 2.5-6 5.5-6s5.5 2.7 5.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17.5" cy="9" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.3 20c0-2.6 1.1-4.6 3.2-5.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  chat: '<path d="M4 5.5h16v11H9l-4 3.5v-3.5H4v-11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  check: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12.5l2.5 2.5L16 9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  target: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+  chart: '<path d="M4 20V11M10.5 20V4M17 20v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 20h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  heart: '<path d="M12 20s-7-4.2-9-8.1C1.4 8.6 3.4 5.5 6.6 5.5c2 0 3.5 1.4 5.4 3.6 1.9-2.2 3.4-3.6 5.4-3.6 3.2 0 5.2 3.1 3.6 6.4C19 15.8 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+};
+
+function iconSvg(name) {
+  return `<svg viewBox="0 0 24 24" width="22" height="22">${ICON[name] || ""}</svg>`;
+}
+
+function badge(name, colorClass) {
+  return `<span class="icon-badge ${colorClass}">${iconSvg(name)}</span>`;
+}
+
 const SENTIMENT_LABEL = { frustrated: "Frustrated", neutral: "Neutral", patient: "Patient" };
 // Deliberately muted, not alarming — no red/neon. Frustrated reads as an
 // amber signal (attention-worthy, not a crisis), patient/neutral as calm.
 const SENTIMENT_CLASS = { frustrated: "sentiment-amber", neutral: "sentiment-slate", patient: "sentiment-teal" };
 
-function kpiTile(value, unit, label) {
+function pageHeader(eyebrow, title) {
+  return `
+    <header class="page-head">
+      <p class="eyebrow">${escapeHtml(eyebrow)}</p>
+      <h1 class="page-title">${escapeHtml(title)}</h1>
+    </header>`;
+}
+
+function kpiTile(icon, colorClass, value, unit, label, caption) {
   return `
     <div class="kpi-tile">
-      <div class="kpi-value">${escapeHtml(value)}${unit ? `<span class="kpi-unit">${escapeHtml(unit)}</span>` : ""}</div>
-      <div class="kpi-label">${escapeHtml(label)}</div>
+      ${badge(icon, colorClass)}
+      <div class="kpi-tile-body">
+        <div class="kpi-label">${escapeHtml(label)}</div>
+        <div class="kpi-value">${escapeHtml(value)}${unit ? `<span class="kpi-unit">${escapeHtml(unit)}</span>` : ""}</div>
+        ${caption ? `<div class="kpi-caption">${escapeHtml(caption)}</div>` : ""}
+      </div>
     </div>`;
 }
 
@@ -45,21 +89,23 @@ function renderPage1(p1) {
 
   return `
     <section class="page page-adoption${hasFeatureRequest ? "" : " no-feature-card"}">
-      <header class="page-head">
-        <p class="eyebrow">Adoption &amp; Product Feedback</p>
-      </header>
+      ${pageHeader("Quarterly review", "Adoption & Product Feedback")}
       <div class="page-body two-col">
         <div class="col col-adoption">
           <div class="kpi-row">
-            ${p1.adoptionRatePct != null ? kpiTile(p1.adoptionRatePct, "%", "Adoption Rate") : ""}
-            ${p1.activeUsers != null ? kpiTile(p1.activeUsers, "", "Active Users") : ""}
+            ${p1.adoptionRatePct != null ? kpiTile("trendUp", "badge-teal", p1.adoptionRatePct, "%", "Adoption Rate", "of licensed capacity") : ""}
+            ${p1.activeUsers != null ? kpiTile("users", "badge-teal", p1.activeUsers, "", "Active Users", "currently active") : ""}
           </div>
-          ${hasInterpretation ? `<p class="interpretation">${escapeHtml(p1.adoptionInterpretationText)}</p>` : ""}
+          ${hasInterpretation ? `
+          <div class="insight-card insight-teal">
+            <p class="insight-head">${badge("chart", "badge-teal")}<span>Interpretation</span></p>
+            <p class="insight-text">${escapeHtml(p1.adoptionInterpretationText)}</p>
+          </div>` : ""}
         </div>
         ${hasFeatureRequest ? `
         <div class="col col-feature">
           <div class="feature-card">
-            <p class="feature-card-eyebrow">Product Feedback</p>
+            <p class="feature-card-eyebrow">${badge("chat", "badge-on-teal")}<span>Product Feedback</span></p>
             <p class="feature-quote">&ldquo;${escapeHtml(p1.topFeatureRequestText)}&rdquo;</p>
             <div class="feature-meta">
               ${sentimentBadge}
@@ -84,7 +130,7 @@ function renderPage2(p2) {
     ? `<div class="commitments-grid ${commitmentDensityClass(items.length)}" style="--cols:${cols}">
         ${items.map((text, i) => `
           <div class="commitment-card">
-            <span class="commitment-index">${i + 1}</span>
+            ${badge("check", "badge-teal")}
             <p class="commitment-text">${escapeHtml(text)}</p>
           </div>`).join("")}
       </div>`
@@ -92,9 +138,7 @@ function renderPage2(p2) {
 
   return `
     <section class="page page-commitments">
-      <header class="page-head">
-        <p class="eyebrow">Open Commitments &amp; Actions</p>
-      </header>
+      ${pageHeader("Quarterly review", "Open Commitments & Actions")}
       <div class="page-body">${body}</div>
     </section>`;
 }
@@ -115,28 +159,26 @@ function renderPage3(p3) {
 
   return `
     <section class="page page-objectives">
-      <header class="page-head">
-        <p class="eyebrow">Business Objectives &amp; Value</p>
-      </header>
+      ${pageHeader("Quarterly review", "Business Objectives & Value")}
       <div class="page-body three-col">
         ${hasObjective ? `
         <div class="col col-objective">
           <div class="objective-card">
-            <p class="block-eyebrow">Business Objective</p>
+            <p class="insight-head">${badge("target", "badge-violet")}<span>Business Objective</span></p>
             <p class="objective-text">${escapeHtml(p3.businessObjectivesText)}</p>
           </div>
         </div>` : ""}
         ${hasValue ? `
         <div class="col col-value">
           <div class="value-card">
-            <p class="block-eyebrow">Value Delivered</p>
+            <p class="insight-head">${badge("chart", "badge-teal")}<span>Value Delivered</span></p>
             <p class="value-text">${escapeHtml(p3.valueDeliveredFullText)}</p>
           </div>
         </div>` : ""}
         ${hasCsat ? `
         <div class="col col-csat">
           <div class="csat-card">
-            <p class="block-eyebrow">Current CSAT</p>
+            <p class="insight-head">${badge("heart", "badge-blue")}<span>Current CSAT</span></p>
             <div class="csat-value">${p3.csatCurrent.toFixed(1)}<span class="csat-scale">/5</span> ${deltaText}</div>
             ${csatDots(p3.csatCurrent)}
           </div>
@@ -148,33 +190,67 @@ function renderPage3(p3) {
 const STYLE = `
   :root {
     --navy: #25333a; --teal: #007f83; --teal-bg: #e5f3f3; --mint: #a9e5d3;
-    --clarity-blue: #226fbd; --insight-violet: #7462a6; --canvas: #f7faf9;
-    --canvas-alt: #eef3f1; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb;
-    --amber: #b6790a; --amber-bg: #fbf3e2;
+    --clarity-blue: #226fbd; --clarity-blue-bg: #eaf2fa;
+    --insight-violet: #7462a6; --violet-bg: #f1eefa;
+    --canvas: #f7faf9; --canvas-alt: #eef3f1; --text: #1f2937; --muted: #6b7280;
+    --border: #e5e7eb; --amber: #b6790a; --amber-bg: #fbf3e2;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--navy); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
-  .deck-viewport { height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .deck-stage { position: relative; width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)); background: var(--canvas); box-shadow: 0 20px 60px rgba(0,0,0,0.35); overflow: hidden; }
-  .page { position: absolute; inset: 0; display: none; flex-direction: column; padding: 5.5% 6%; }
+  body { display: flex; flex-direction: column; }
+
+  /* Persistent top navigation — same "wordmark left, page links, context
+     right" shape as the approved qbr-klickdummy reference nav, adapted with
+     real customer context (account name/industry/CSM) instead of a static
+     "Start" link list. --topnav-h is subtracted from the deck viewport so
+     the 16:9 stage below still fits without scrolling. */
+  :root { --topnav-h: 52px; }
+  .topnav { height: var(--topnav-h); flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 20px; background: var(--navy); color: #e7eef5; z-index: 10; }
+  .topnav-brand { font-size: 12.5px; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap; }
+  .topnav-brand span { color: var(--mint); }
+  .topnav-links { display: flex; gap: 4px; }
+  .topnav-link { font: inherit; font-size: 12.5px; font-weight: 600; color: rgba(231,238,245,0.65); background: none; border: none; border-bottom: 2px solid transparent; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+  .topnav-link:hover { color: #fff; }
+  .topnav-link.active { color: #fff; border-bottom-color: var(--mint); }
+  .topnav-customer { display: flex; align-items: baseline; gap: 8px; font-size: 12px; text-align: right; min-width: 0; }
+  .topnav-customer-name { font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topnav-customer-meta { color: rgba(231,238,245,0.6); white-space: nowrap; }
+
+  .deck-viewport { height: calc(100vh - var(--topnav-h)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .deck-stage { position: relative; width: min(100vw, calc((100vh - var(--topnav-h)) * 16 / 9)); height: min(calc(100vh - var(--topnav-h)), calc(100vw * 9 / 16)); background: linear-gradient(180deg, var(--canvas-alt) 0%, var(--canvas) 22%); box-shadow: 0 20px 60px rgba(0,0,0,0.35); overflow: hidden; }
+  .page { position: absolute; inset: 0; display: none; flex-direction: column; padding: 4.5% 5.5%; }
   .page.active { display: flex; }
-  .page-head { flex: 0 0 auto; margin-bottom: 2.2%; border-bottom: 2px solid var(--teal); padding-bottom: 1.4%; }
-  .eyebrow { margin: 0; font-size: clamp(11px, 1.5vw, 15px); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--teal); }
+  .page-head { flex: 0 0 auto; margin-bottom: 2%; padding-bottom: 1.2%; border-bottom: 2px solid var(--teal); }
+  .eyebrow { margin: 0 0 2px; font-size: clamp(10px, 1.2vw, 13px); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); }
+  .page-title { margin: 0; font-size: clamp(22px, 3.4vw, 38px); font-weight: 800; color: var(--navy); letter-spacing: -0.01em; }
   .page-body { flex: 1 1 auto; display: flex; min-height: 0; }
-  .page-body.two-col { gap: 4%; }
-  .page-body.three-col { gap: 3.5%; }
+  .page-body.two-col { gap: 3.5%; }
+  .page-body.three-col { gap: 3%; }
   .col { display: flex; flex-direction: column; min-width: 0; }
-  .col-adoption { flex: 1 1 55%; justify-content: flex-start; gap: 3.5%; }
+  .col-adoption { flex: 1 1 55%; justify-content: flex-start; gap: 3%; }
   .col-feature { flex: 1 1 45%; justify-content: center; }
-  .kpi-row { display: flex; gap: 4%; }
-  .kpi-tile { flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 6% 5%; box-shadow: 0 6px 18px rgba(15,23,42,0.07); }
-  .kpi-value { font-size: clamp(30px, 5.2vw, 58px); font-weight: 800; color: var(--navy); line-height: 1; }
-  .kpi-unit { font-size: 0.5em; font-weight: 700; color: var(--teal); margin-left: 2px; }
-  .kpi-label { margin-top: 10px; font-size: clamp(11px, 1.3vw, 14px); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
-  .interpretation { font-size: clamp(13px, 1.6vw, 17px); line-height: 1.6; color: var(--text); margin: 0; }
-  .feature-card { background: linear-gradient(165deg, var(--teal-bg) 0%, #fff 65%); border: 1px solid var(--teal); border-radius: 16px; padding: 7%; box-shadow: 0 8px 24px rgba(0,127,131,0.12); }
-  .feature-card-eyebrow { margin: 0 0 3%; font-size: clamp(10px, 1.2vw, 13px); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--teal); }
-  .feature-quote { margin: 0 0 5%; font-size: clamp(15px, 2.1vw, 22px); font-weight: 600; line-height: 1.4; color: var(--navy); }
+
+  .icon-badge { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 2.4em; height: 2.4em; border-radius: 50%; }
+  .badge-teal { background: var(--teal-bg); color: var(--teal); }
+  .badge-blue { background: var(--clarity-blue-bg); color: var(--clarity-blue); }
+  .badge-violet { background: var(--violet-bg); color: var(--insight-violet); }
+  .badge-on-teal { background: rgba(255,255,255,0.6); color: var(--teal); }
+
+  .kpi-row { display: flex; gap: 3.5%; }
+  .kpi-tile { flex: 1; display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 5.5% 5%; box-shadow: 0 6px 18px rgba(15,23,42,0.06); }
+  .kpi-label { font-size: clamp(10px, 1.1vw, 12.5px); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .kpi-value { font-size: clamp(24px, 4vw, 40px); font-weight: 800; color: var(--navy); line-height: 1.15; }
+  .kpi-unit { font-size: 0.55em; font-weight: 700; color: var(--teal); margin-left: 2px; }
+  .kpi-caption { font-size: clamp(9.5px, 1vw, 11.5px); color: var(--muted); font-weight: 500; }
+
+  .insight-card { border-radius: 14px; padding: 5% 5.5%; border: 1px solid var(--border); background: #fff; }
+  .insight-teal { border-top: 3px solid var(--teal); }
+  .insight-head { display: flex; align-items: center; gap: 10px; margin: 0 0 3%; font-size: clamp(11px, 1.25vw, 13.5px); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--teal); }
+  .insight-text { margin: 0; font-size: clamp(13px, 1.55vw, 16.5px); line-height: 1.6; color: var(--text); }
+
+  .feature-card { height: 100%; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(165deg, var(--teal-bg) 0%, #fff 68%); border: 1px solid var(--teal); border-radius: 16px; padding: 7%; box-shadow: 0 8px 24px rgba(0,127,131,0.12); }
+  .feature-card-eyebrow { display: flex; align-items: center; gap: 10px; margin: 0 0 5%; font-size: clamp(10px, 1.2vw, 13px); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--teal); }
+  .feature-quote { margin: 0 0 5%; font-size: clamp(15px, 2vw, 21px); font-weight: 600; line-height: 1.4; color: var(--navy); }
   .feature-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .sentiment-badge { font-size: clamp(10px, 1.1vw, 12px); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 5px 12px; border-radius: 999px; }
   .sentiment-amber { background: var(--amber-bg); color: var(--amber); }
@@ -183,71 +259,101 @@ const STYLE = `
   .feature-evidence { font-size: clamp(11px, 1.2vw, 13px); color: var(--muted); }
   .no-feature-card .col-adoption { flex: 1 1 100%; }
 
-  .commitments-grid { display: grid; gap: 4%; width: 100%; align-content: center; }
+  .commitments-grid { display: grid; gap: 3.5%; width: 100%; align-content: center; }
   .density-1 { grid-template-columns: 1fr; }
-  .density-1 .commitment-card { padding: 6%; }
-  .density-1 .commitment-text { font-size: clamp(18px, 2.6vw, 28px); }
+  .density-1 .commitment-card { padding: 5.5%; }
+  .density-1 .commitment-text { font-size: clamp(17px, 2.4vw, 25px); }
   .density-2-3 { grid-template-columns: repeat(var(--cols, 2), 1fr); align-items: stretch; }
   .density-4-5 { grid-template-columns: repeat(2, 1fr); }
-  .commitment-card { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--teal); border-radius: 12px; padding: 5% 6%; box-shadow: 0 4px 14px rgba(15,23,42,0.06); display: flex; flex-direction: column; gap: 10px; }
-  .commitment-index { font-size: clamp(11px, 1.2vw, 13px); font-weight: 800; color: var(--teal); }
-  .commitment-text { margin: 0; font-size: clamp(13px, 1.6vw, 18px); line-height: 1.5; color: var(--text); font-weight: 500; }
+  .commitment-card { display: flex; align-items: flex-start; gap: 14px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 4.5% 5%; box-shadow: 0 4px 14px rgba(15,23,42,0.06); }
+  .commitment-text { margin: 0.15em 0 0; font-size: clamp(13px, 1.5vw, 17px); line-height: 1.5; color: var(--text); font-weight: 500; }
   .empty-state { margin: auto; color: var(--muted); font-size: 16px; }
 
   .col-objective { flex: 1 1 40%; justify-content: center; }
   .col-value { flex: 1 1 35%; justify-content: center; }
   .col-csat { flex: 1 1 25%; justify-content: center; }
-  .objective-card, .value-card, .csat-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 9% 8%; box-shadow: 0 6px 18px rgba(15,23,42,0.06); width: 100%; }
-  .objective-card { border-top: 4px solid var(--insight-violet); }
-  .value-card { border-top: 4px solid var(--mint); }
-  .csat-card { border-top: 4px solid var(--clarity-blue); }
-  .block-eyebrow { margin: 0 0 5%; font-size: clamp(10px, 1.2vw, 13px); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--insight-violet); }
-  .objective-text { margin: 0; font-size: clamp(16px, 2.3vw, 24px); font-weight: 700; line-height: 1.45; color: var(--navy); }
-  .value-text { margin: 0; font-size: clamp(13px, 1.6vw, 17px); line-height: 1.6; color: var(--text); }
-  .col-csat .block-eyebrow { color: var(--clarity-blue); }
-  .csat-value { font-size: clamp(28px, 4.2vw, 46px); font-weight: 800; color: var(--navy); display: flex; align-items: baseline; gap: 8px; }
+  .objective-card, .value-card, .csat-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 8% 7%; box-shadow: 0 6px 18px rgba(15,23,42,0.06); width: 100%; }
+  .objective-card { border-top: 3px solid var(--insight-violet); }
+  .value-card { border-top: 3px solid var(--teal); }
+  .csat-card { border-top: 3px solid var(--clarity-blue); }
+  .objective-card .insight-head { color: var(--insight-violet); }
+  .value-card .insight-head { color: var(--teal); }
+  .csat-card .insight-head { color: var(--clarity-blue); }
+  .objective-text { margin: 0; font-size: clamp(15px, 2.1vw, 22px); font-weight: 700; line-height: 1.45; color: var(--navy); }
+  .value-text { margin: 0; font-size: clamp(13px, 1.5vw, 16px); line-height: 1.6; color: var(--text); }
+  .csat-value { font-size: clamp(26px, 3.8vw, 42px); font-weight: 800; color: var(--navy); display: flex; align-items: baseline; gap: 8px; }
   .csat-scale { font-size: 0.4em; font-weight: 700; color: var(--muted); }
-  .csat-delta { font-size: clamp(13px, 1.6vw, 17px); font-weight: 700; }
+  .csat-delta { font-size: clamp(13px, 1.5vw, 16px); font-weight: 700; }
   .csat-delta-up { color: var(--teal); }
   .csat-delta-down { color: var(--amber); }
   .csat-dots { display: flex; gap: 6px; margin-top: 10px; }
   .csat-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--canvas-alt); border: 1px solid var(--border); }
   .csat-dot.filled { background: var(--clarity-blue); border-color: var(--clarity-blue); }
 
-  .deck-nav { position: absolute; left: 0; right: 0; bottom: 3%; display: flex; align-items: center; justify-content: center; gap: 16px; z-index: 5; }
+  .page-footer { position: absolute; left: 5.5%; right: 5.5%; bottom: 2.8%; display: flex; justify-content: space-between; align-items: center; font-size: clamp(9.5px, 0.95vw, 11px); color: var(--muted); z-index: 3; }
+  .page-footer-brand { font-weight: 700; letter-spacing: 0.03em; }
+  .page-footer-brand span { color: var(--teal); }
+
+  .deck-nav { position: absolute; left: 0; right: 0; bottom: 1%; display: flex; align-items: center; justify-content: center; gap: 16px; z-index: 5; }
   .deck-nav button { font: inherit; font-weight: 700; font-size: 13px; letter-spacing: 0.02em; color: var(--navy); background: rgba(255,255,255,0.85); border: 1px solid var(--border); border-radius: 999px; padding: 8px 18px; cursor: pointer; }
   .deck-nav button:hover { background: #fff; border-color: var(--teal); color: var(--teal); }
   .deck-nav button:disabled { opacity: 0.35; cursor: default; }
   .deck-nav .deck-page-count { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .deck-brand { position: absolute; top: 5.5%; right: 6%; font-size: clamp(10px, 1.1vw, 13px); font-weight: 700; color: var(--muted); letter-spacing: 0.03em; z-index: 4; }
 `;
 
 const SCRIPT = `
   (function () {
     var pages = Array.prototype.slice.call(document.querySelectorAll(".page"));
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll(".topnav-link"));
     var idx = 0;
     var counter = document.getElementById("deck-page-count");
     var prevBtn = document.getElementById("deck-prev");
     var nextBtn = document.getElementById("deck-next");
     function render() {
       pages.forEach(function (p, i) { p.classList.toggle("active", i === idx); });
+      navLinks.forEach(function (l, i) { l.classList.toggle("active", i === idx); });
       counter.textContent = (idx + 1) + " / " + pages.length;
       prevBtn.disabled = idx === 0;
       nextBtn.disabled = idx === pages.length - 1;
     }
-    prevBtn.addEventListener("click", function () { if (idx > 0) { idx--; render(); } });
-    nextBtn.addEventListener("click", function () { if (idx < pages.length - 1) { idx++; render(); } });
+    function goTo(i) { idx = i; render(); }
+    prevBtn.addEventListener("click", function () { if (idx > 0) goTo(idx - 1); });
+    nextBtn.addEventListener("click", function () { if (idx < pages.length - 1) goTo(idx + 1); });
+    navLinks.forEach(function (l, i) { l.addEventListener("click", function () { goTo(i); }); });
     document.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowRight") { if (idx < pages.length - 1) { idx++; render(); } }
-      if (e.key === "ArrowLeft") { if (idx > 0) { idx--; render(); } }
+      if (e.key === "ArrowRight") { if (idx < pages.length - 1) goTo(idx + 1); }
+      if (e.key === "ArrowLeft") { if (idx > 0) goTo(idx - 1); }
     });
     render();
   })();
 `;
 
-export function renderQbrHtml({ account, content }) {
+const NAV_PAGES = [
+  { id: "page-adoption", label: "Adoption & Feedback" },
+  { id: "page-commitments", label: "Commitments" },
+  { id: "page-objectives", label: "Objectives & Value" },
+];
+
+export function renderQbrHtml({ account, content, csmName }) {
   const pagesHtml = [renderPage1(content.page1), renderPage2(content.page2), renderPage3(content.page3)].join("\n");
   const title = `${account?.accountName || "Customer"} — Web QBR`;
+  const footer = `
+    <div class="page-footer">
+      <span>${escapeHtml(account?.accountName || "")} · ${escapeHtml(quarterOf(REFERENCE_DATE_ISO))}</span>
+      <span class="page-footer-brand">CUSTOMER SUCCESS <span>AI | HUB</span></span>
+    </div>`;
+  const customerMeta = [account?.industry, csmName ? `CSM: ${csmName}` : null].filter(Boolean).join(" · ");
+  const topnav = `
+    <nav class="topnav">
+      <span class="topnav-brand">CUSTOMER SUCCESS <span>AI | HUB</span></span>
+      <div class="topnav-links">
+        ${NAV_PAGES.map(p => `<button type="button" class="topnav-link">${escapeHtml(p.label)}</button>`).join("")}
+      </div>
+      <div class="topnav-customer">
+        <span class="topnav-customer-name">${escapeHtml(account?.accountName || "")}</span>
+        ${customerMeta ? `<span class="topnav-customer-meta">${escapeHtml(customerMeta)}</span>` : ""}
+      </div>
+    </nav>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -256,10 +362,11 @@ export function renderQbrHtml({ account, content }) {
 <style>${STYLE}</style>
 </head>
 <body>
+  ${topnav}
   <div class="deck-viewport">
     <div class="deck-stage">
-      <div class="deck-brand">${escapeHtml(account?.accountName || "")}</div>
       ${pagesHtml}
+      ${footer}
       <nav class="deck-nav">
         <button id="deck-prev" type="button">← Prev</button>
         <span id="deck-page-count" class="deck-page-count"></span>
