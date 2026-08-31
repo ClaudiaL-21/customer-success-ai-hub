@@ -12,7 +12,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "pptx-automizer": "^0.9.0",
+    "pptx-automizer": "^0.9.3",
     "pptxgenjs": "^4.0.1"
   }
 }
