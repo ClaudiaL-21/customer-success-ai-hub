@@ -15,17 +15,10 @@
 // ENABLE_EXTERNAL_ACTIONS=true as well closes it: a configured webhook URL
 // alone is no longer sufficient to reach the outside world.
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { applyGate } from "./_security.js";
+import { loadAccountDataset } from "./_accounts.js";
 import { computeHealthScore } from "../src/scoring.js";
 import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_APPROVAL_TIMEOUT_MS } from "./_n8n.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA = JSON.parse(readFileSync(join(__dirname, "..", "data", "accounts.json"), "utf-8"));
-const ACCOUNTS = DATA.accounts;
-const CSMS = DATA.csms;
 
 const N8N_APPROVAL_WEBHOOK_URL = process.env.N8N_APPROVAL_WEBHOOK_URL;
 // Must be exactly the string "true" — missing, empty, "false", or any other
@@ -48,7 +41,10 @@ export default async function handler(req, res) {
 
   const { accountId, action, category, rationale } = req.body || {};
 
-  const account = ACCOUNTS.find(a => a.accountId === accountId);
+  let data;
+  try { data = await loadAccountDataset(); }
+  catch { return res.status(503).json({ error: "Account data is currently unavailable. Please try again." }); }
+  const account = data.accounts.find(a => a.accountId === accountId);
   if (!account) return res.status(404).json({ error: "Unknown accountId" });
 
   const trimmedAction = String(action ?? "").trim();
@@ -73,7 +69,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "This account is high risk; a growth action cannot be sent for it." });
   }
 
-  const csm = CSMS.find(c => c.csmId === account.csmId);
+  const csm = data.csms.find(c => c.csmId === account.csmId);
 
   const payload = {
     accountId: account.accountId,

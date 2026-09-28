@@ -1,29 +1,21 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { AccountDataError, loadAccountDataset } from "./_accounts.js";
 import { computeHealthScore, computePriorityScore, computePortfolioKpis, REFERENCE_DATE_ISO } from "../src/scoring.js";
 import { buildCustomerContext, formatAccountContextText, formatCustomerSummaryLine, PORTFOLIO_GROUNDING_HINTS, computeEvidenceConfidence as computeEvidenceConfidenceImpl } from "../src/customerContext.js";
 import { applyGate } from "./_security.js";
 import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_ANALYZE_TIMEOUT_MS } from "./_n8n.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ACCOUNTS_DATA = JSON.parse(
-  readFileSync(join(__dirname, "..", "data", "accounts.json"), "utf-8")
-);
-const ACCOUNTS = ACCOUNTS_DATA.accounts;
-// CSM names live only in accounts.json's top-level "csms" list, not on each
+// CSM names live in the dataset's top-level "csms" list, not on each
 // account (which only stores csmId) — the portfolio-ask AI context needs
 // this to resolve a CSM's name the same way the UI's csmName() does,
 // otherwise it only ever sees opaque IDs like "CSM-5".
-const CSM_NAME_BY_ID = new Map((ACCOUNTS_DATA.csms || []).map(c => [c.csmId, c.name]));
-function csmName(csmId) {
-  return CSM_NAME_BY_ID.get(csmId) ?? csmId;
+function csmName(csmId, csms) {
+  return csms.find(c => c.csmId === csmId)?.name ?? csmId;
 }
 // Sprint 14C — every AI prompt-builder below gets an account's data through
 // this one call into the canonical context module (src/customerContext.js),
 // instead of each assembling its own subset of fields.
-function contextOf(account) {
-  return buildCustomerContext(account, { csmName: csmName(account.csmId) });
+function contextOf(account, csms) {
+  return buildCustomerContext(account, { csmName: csmName(account.csmId, csms) });
 }
 // Sprint 16 — the fixed set of views the reused Ask box can be mounted on;
 // see its use as an allow-list where viewLabel (client-supplied) reaches the prompt.
@@ -110,8 +102,8 @@ function mockAsk(account, question) {
   return { answer: `[MOCK response, not real AI] Regarding "${question}" for ${account.accountName}: the score is ${computeHealthScore(account).score}, this is a simulated answer for local testing.` };
 }
 
-function mockTeamPriority(csmId) {
-  const scored = ACCOUNTS
+function mockTeamPriority(csmId, data) {
+  const scored = data.accounts
     .filter(a => !csmId || a.csmId === csmId)
     .map(a => ({ account: a, priority: computePriorityScore(a) }))
     .sort((x, y) => y.priority.score - x.priority.score)
@@ -574,8 +566,8 @@ Internal vs. customer-safe:
 Always respond with ONLY valid JSON matching the schema you are given, no markdown
 fences, no commentary outside the JSON.`;
 
-function mockQbrDraft(account) {
-  const ctx = contextOf(account);
+function mockQbrDraft(account, csms) {
+  const ctx = contextOf(account, csms);
   const { facts, derived } = ctx;
   const noEvidence = "[MOCK] Not available in current customer data.";
   const bySection = {
@@ -623,13 +615,13 @@ function withTitles(sections) {
   return sections.map((s, i) => ({ ...s, title: QBR_SECTION_DEFS[i].title }));
 }
 
-async function handleQbrDraft(account) {
+async function handleQbrDraft(account, csms) {
   if (MOCK_MODE) {
     await new Promise(r => setTimeout(r, 500));
-    return { accountId: account.accountId, generatedAt: REFERENCE_DATE_ISO, sections: withTitles(applyQbrSensitiveGuardrail(mockQbrDraft(account))) };
+    return { accountId: account.accountId, generatedAt: REFERENCE_DATE_ISO, sections: withTitles(applyQbrSensitiveGuardrail(mockQbrDraft(account, csms))) };
   }
   const sectionList = QBR_SECTION_DEFS.map((s, i) => `${i + 1}. "${s.key}" — ${s.title}${s.listCapable ? " (list-capable: also fill presentationItems)" : ""}`).join("\n");
-  const user = `${formatAccountContextText(contextOf(account))}
+  const user = `${formatAccountContextText(contextOf(account, csms))}
 
 Today's date: ${REFERENCE_DATE_ISO}. Use this to judge whether any date you
 reference is in the past or the future (see the temporal grounding rule above).
@@ -738,8 +730,8 @@ function mockPortfolioSummary(accounts, kpis) {
   };
 }
 
-async function handlePortfolioSummary(accountIds) {
-  const accounts = ACCOUNTS.filter(a => accountIds.includes(a.accountId));
+async function handlePortfolioSummary(accountIds, data) {
+  const accounts = data.accounts.filter(a => accountIds.includes(a.accountId));
   const kpis = computePortfolioKpis(accounts);
   const validIds = new Set(accounts.map(a => a.accountId));
 
@@ -752,7 +744,7 @@ async function handlePortfolioSummary(accountIds) {
     return { kpis, summary: mockPortfolioSummary(accounts, kpis) };
   }
 
-  const summary = accounts.map(a => formatCustomerSummaryLine(contextOf(a))).join("\n");
+  const summary = accounts.map(a => formatCustomerSummaryLine(contextOf(a, data.csms))).join("\n");
   const user = `You are given the deterministic KPIs for a CS Manager's current portfolio view (already filtered to what they're looking at — do not consider any other accounts) and a one-line summary of each of the ${accounts.length} account(s) in that scope.
 
 KPIs for this scope:
@@ -794,7 +786,7 @@ Respond with ONLY this JSON schema:
   };
 }
 
-async function handleAccountInsight(account) {
+async function handleAccountInsight(account, csms) {
   const health = computeHealthScore(account);
 
   if (MOCK_MODE) {
@@ -804,7 +796,7 @@ async function handleAccountInsight(account) {
     insight.nextBestAction = applyExpansionGuardrail(account, health, insight.nextBestAction);
     return insight;
   }
-  const user = `${formatAccountContextText(contextOf(account))}
+  const user = `${formatAccountContextText(contextOf(account, csms))}
 
 Respond with ONLY this JSON schema:
 {
@@ -824,13 +816,13 @@ Respond with ONLY this JSON schema:
   return parsed;
 }
 
-async function handleAsk(account, question) {
+async function handleAsk(account, question, csms) {
   const safeQuestion = String(question || "").slice(0, 500);
   if (MOCK_MODE) {
     await new Promise(r => setTimeout(r, 500));
     return mockAsk(account, safeQuestion);
   }
-  const user = `${formatAccountContextText(contextOf(account))}
+  const user = `${formatAccountContextText(contextOf(account, csms))}
 
 The CSM asks: "${safeQuestion}"
 
@@ -842,8 +834,8 @@ Respond with ONLY this JSON schema:
   return parsed;
 }
 
-async function handlePortfolioAsk(accountIds, question, viewLabel) {
-  const accounts = ACCOUNTS.filter(a => accountIds.includes(a.accountId));
+async function handlePortfolioAsk(accountIds, question, viewLabel, data) {
+  const accounts = data.accounts.filter(a => accountIds.includes(a.accountId));
   const safeQuestion = String(question || "").slice(0, 500);
   if (MOCK_MODE) {
     await new Promise(r => setTimeout(r, 500));
@@ -860,7 +852,7 @@ async function handlePortfolioAsk(accountIds, question, viewLabel) {
     ? `The CSM is asking from the "${viewLabel}" view of this app. If it's naturally relevant, you may frame the answer in terms of that view's focus (Map: geography; Value Matrix: value realization/strategic value; Renewal Radar: renewal timing/urgency; Features: feature requests) — but still answer strictly from the account data below, and answer questions unrelated to that view's focus normally.\n\n`
     : "";
 
-  const summary = accounts.map(a => formatCustomerSummaryLine(contextOf(a))).join("\n");
+  const summary = accounts.map(a => formatCustomerSummaryLine(contextOf(a, data.csms))).join("\n");
   const user = `${viewContext}You are given a summary of ${accounts.length} accounts (already filtered to what the CSM is currently looking at — do not consider any other accounts).
 
 ${summary}
@@ -879,17 +871,17 @@ Respond with ONLY this JSON schema:
   return parsed;
 }
 
-async function handleTeamPriority(csmId) {
+async function handleTeamPriority(csmId, data) {
   if (MOCK_MODE) {
     await new Promise(r => setTimeout(r, 500));
-    return mockTeamPriority(csmId);
+    return mockTeamPriority(csmId, data);
   }
 
   // The ranking itself is deterministic (risk + ARR + renewal proximity +
   // engagement, see computePriorityScore) — the AI never picks or reorders
   // accounts. It only adds what a formula can't: connecting score drivers to
   // the actual customer quotes, and one concrete Next Best Action per account.
-  const scored = ACCOUNTS
+  const scored = data.accounts
     .filter(a => !csmId || a.csmId === csmId)
     .map(a => ({ account: a, priority: computePriorityScore(a) }))
     .sort((x, y) => y.priority.score - x.priority.score)
@@ -899,7 +891,7 @@ async function handleTeamPriority(csmId) {
 
   const contextBlocks = scored.map(({ account, priority }, i) =>
     `--- Account ${i + 1}: ${account.accountName} (accountId ${account.accountId}, priority score ${priority.score}/100 — rank is FIXED, do not reorder) ---
-${formatAccountContextText(contextOf(account))}
+${formatAccountContextText(contextOf(account, data.csms))}
 Days to renewal: ${priority.daysToRenewal}`
   ).join("\n\n");
 
@@ -952,10 +944,10 @@ export default async function handler(req, res) {
   }
 
   const { mode, accountId, question, csmId, accountIds, viewLabel } = req.body || {};
-
   try {
+    const data = await loadAccountDataset();
     if (mode === "team-priority") {
-      const result = await handleTeamPriority(csmId);
+      const result = await handleTeamPriority(csmId, data);
       return res.status(200).json(result);
     }
     if (mode === "portfolio-ask") {
@@ -964,31 +956,34 @@ export default async function handler(req, res) {
       // is re-validated against this fixed allow-list server-side (never
       // passed through raw) since it's client-supplied.
       const safeViewLabel = VIEW_LABELS.includes(viewLabel) ? viewLabel : null;
-      const result = await handlePortfolioAsk(Array.isArray(accountIds) ? accountIds : [], question, safeViewLabel);
+      const result = await handlePortfolioAsk(Array.isArray(accountIds) ? accountIds : [], question, safeViewLabel, data);
       return res.status(200).json(result);
     }
     if (mode === "portfolio-summary") {
-      const result = await handlePortfolioSummary(Array.isArray(accountIds) ? accountIds : []);
+      const result = await handlePortfolioSummary(Array.isArray(accountIds) ? accountIds : [], data);
       return res.status(200).json(result);
     }
 
-    const account = ACCOUNTS.find(a => a.accountId === accountId);
+    const account = data.accounts.find(a => a.accountId === accountId);
     if (!account) return res.status(404).json({ error: "Unknown accountId" });
 
     if (mode === "account-insight") {
-      const result = await handleAccountInsight(account);
+      const result = await handleAccountInsight(account, data.csms);
       return res.status(200).json(result);
     }
     if (mode === "ask") {
-      const result = await handleAsk(account, question);
+      const result = await handleAsk(account, question, data.csms);
       return res.status(200).json(result);
     }
     if (mode === "qbr-draft") {
-      const result = await handleQbrDraft(account);
+      const result = await handleQbrDraft(account, data.csms);
       return res.status(200).json(result);
     }
     return res.status(400).json({ error: "Unknown mode" });
   } catch (err) {
+    if (err instanceof AccountDataError) {
+      return res.status(503).json({ error: "Account data is currently unavailable. Please try again." });
+    }
     console.error("analyze.js error:", err.message);
     return res.status(502).json({ error: "AI call failed" });
   }

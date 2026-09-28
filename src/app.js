@@ -54,7 +54,8 @@ let state = {
 };
 
 async function init() {
-  const res = await fetch("data/accounts.json");
+  const res = await fetch("/api/accounts", { cache: "no-store" });
+  if (!res.ok) throw new Error("Account data is currently unavailable");
   const data = await res.json();
   state.csms = data.csms;
   state.accounts = data.accounts.map(acc => {
@@ -2709,4 +2710,6 @@ function formatAiAnswer(raw) {
   return `<div class="ai-answer">${inner}</div>`;
 }
 
-init();
+init().catch(() => {
+  document.getElementById("app").innerHTML = '<div class="card"><h2>Account data is temporarily unavailable</h2><p>Please reload the page in a moment.</p></div>';
+});

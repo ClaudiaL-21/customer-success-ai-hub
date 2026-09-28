@@ -1,5 +1,8 @@
 {
   "functions": {
+    "api/accounts.js": {
+      "includeFiles": "data/**"
+    },
     "api/analyze.js": {
       "includeFiles": "data/**"
     },

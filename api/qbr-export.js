@@ -6,10 +6,9 @@
 // {key, safeText, presentationText, presentationItems} tuples the client
 // already produced via selectCustomerSafeSections() (src/qbrPreview.js) in
 // the Review/Preview UI. Deterministic account facts (name, health score,
-// adoption trend, CSAT, healthScoreHistory) are looked up server-side from
-// data/accounts.json — never trusted from the client — matching how every
-// other AI endpoint in this file resolves `account` from `accountId`, not
-// from client-supplied numbers.
+// adoption trend, CSAT, healthScoreHistory) are looked up through the shared
+// server-side account loader — never trusted from the client — matching how
+// the other AI endpoints resolve accountId, not client-supplied numbers.
 //
 // 2026-08 Block B — the master-template renderer (src/qbrMasterRenderer.js,
 // pptx-automizer against the approved assets/qbr-master/QBR_Customer.pptx)
@@ -17,18 +16,11 @@
 // still pass through the master unmodified (Block C/D will populate them);
 // the old src/qbrPresentationMap.js + src/qbrPptxRenderer.js are unused by
 // this endpoint now but left in place, not deleted, pending Block C/D.
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { applyGate } from "./_security.js";
+import { loadAccountDataset } from "./_accounts.js";
 import { QBR_SECTION_DEFS } from "./analyze.js";
 import { mapQbrToMasterContent } from "../src/qbrMasterContentMap.js";
 import { renderQbrMasterPptx } from "../src/qbrMasterRenderer.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ACCOUNTS = JSON.parse(
-  readFileSync(join(__dirname, "..", "data", "accounts.json"), "utf-8")
-).accounts;
 
 const VALID_KEYS = new Set(QBR_SECTION_DEFS.map(d => d.key));
 const LIST_CAPABLE_KEYS = new Set(QBR_SECTION_DEFS.filter(d => d.listCapable).map(d => d.key));
@@ -63,7 +55,10 @@ export default async function handler(req, res) {
   if (!applyGate(req, res)) return;
 
   const { accountId, sections } = req.body || {};
-  const account = ACCOUNTS.find(a => a.accountId === accountId);
+  let data;
+  try { data = await loadAccountDataset(); }
+  catch { return res.status(503).json({ error: "Account data is currently unavailable. Please try again." }); }
+  const account = data.accounts.find(a => a.accountId === accountId);
   if (!account) return res.status(404).json({ error: "Unknown accountId" });
 
   const cleanSections = sanitizeSections(sections);
