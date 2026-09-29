@@ -1,6 +1,7 @@
 import { computeHealthScore, computeExpansionScore, computePriorityScore, computePortfolioKpis, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
 import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft, fetchPortfolioSummary, generateQbrPptx } from "./ai.js";
 import { buildAccountActivity } from "./activity.js";
+import { loadInboxSignals, renderInboxView } from "./inbox.js";
 import { selectCustomerSafeSections } from "./qbrPreview.js";
 import { mapQbrToHtmlContent } from "./qbrHtmlContentMap.js";
 import { renderQbrHtml } from "./qbrHtmlRenderer.js";
@@ -51,6 +52,11 @@ let state = {
   teamPriority: { status: "idle", data: null, error: null, csmId: null }, // csmId: null = whole-team scope
   portfolioAsk: { status: "idle", question: "", answer: "", error: "" }, // scoped to whatever getFilteredAccounts() returns at ask time
   portfolioAskExpanded: false, // collapsed-by-default state for the Ask box on Map/Matrix/Features (Portfolio's own is never collapsible)
+  // Sprint 16 — Customer Intelligence Inbox. Lazy-loaded on first visit to
+  // the Inbox tab, not at startup, matching the app's other on-demand AI/data
+  // panels (Portfolio Summary, Team Priority, etc.).
+  inbox: { status: "idle", signals: [], error: null },
+  inboxFilters: { scope: "all", type: "all", processingStatus: "all" },
 };
 
 async function init() {
@@ -59,7 +65,7 @@ async function init() {
   render();
 }
 
-async function refreshAccountData() {
+export async function refreshAccountData() {
   const res = await fetch("/api/accounts", { cache: "no-store" });
   if (!res.ok) throw new Error("Account data is currently unavailable");
   const data = await res.json();
@@ -83,6 +89,11 @@ function bindControls() {
   document.getElementById("tab-map").addEventListener("click", () => { state.view = "map"; render(); });
   document.getElementById("tab-team").addEventListener("click", () => { state.view = "team"; render(); });
   document.getElementById("tab-qbrs").addEventListener("click", () => { state.view = "qbrs"; render(); });
+  document.getElementById("tab-inbox").addEventListener("click", () => {
+    state.view = "inbox";
+    if (state.inbox.status === "idle") loadInboxSignals(state, render);
+    else render();
+  });
   document.getElementById("tab-feedback").addEventListener("click", () => { state.view = "feedback"; render(); });
   document.getElementById("tab-trust").addEventListener("click", () => { state.view = "trust"; render(); });
 
@@ -259,10 +270,11 @@ function render() {
   document.getElementById("tab-map").classList.toggle("active", state.view === "map");
   document.getElementById("tab-team").classList.toggle("active", state.view === "team");
   document.getElementById("tab-qbrs").classList.toggle("active", state.view === "qbrs");
+  document.getElementById("tab-inbox").classList.toggle("active", state.view === "inbox");
   document.getElementById("tab-feedback").classList.toggle("active", state.view === "feedback");
   document.getElementById("tab-trust").classList.toggle("active", state.view === "trust");
   document.getElementById("filters").style.display = (state.view === "team" || state.view === "trust") ? "none" : "flex";
-  document.getElementById("filters").classList.toggle("filters-csm-only", state.view === "qbrs");
+  document.getElementById("filters").classList.toggle("filters-csm-only", state.view === "qbrs" || state.view === "inbox");
   syncDrillDownIndicator();
 
   const root = document.getElementById("app");
@@ -271,6 +283,7 @@ function render() {
   else if (state.view === "matrix") root.appendChild(renderMatrix());
   else if (state.view === "map") root.appendChild(renderMap());
   else if (state.view === "qbrs") root.appendChild(renderQbrsOverview());
+  else if (state.view === "inbox") root.appendChild(renderInboxView(state, render));
   else if (state.view === "feedback") root.appendChild(renderFeedback());
   else if (state.view === "trust") root.appendChild(renderTrust());
   else root.appendChild(renderTeam());
@@ -984,7 +997,7 @@ function renderAiSection(container, acc) {
 // confirm before anything reaches /api/approve-action. Draft edits live in
 // state.approvals[accountId].draft (not local DOM state) so they survive any
 // re-render (e.g. after a validation error) without reverting to the AI original.
-function renderApprovalControl(container, accountId, nba, signalId = null) {
+export function renderApprovalControl(container, accountId, nba, signalId = null) {
   const approvalKey = signalId || accountId;
   const approval = state.approvals[approvalKey] || { status: "idle" };
 

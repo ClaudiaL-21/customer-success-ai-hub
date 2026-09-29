@@ -59,3 +59,31 @@ export async function loadAccountDataset() {
     throw new AccountDataError();
   }
 }
+
+// Sprint 16 — Customer Intelligence Inbox, Package 6. Mirrors
+// loadAccountDataset()'s connection handling exactly, calling
+// hub_inbox_dataset() (Package 2) instead. No JSON-fixture equivalent exists
+// for the Inbox concept — the offline demo dataset predates it — so
+// ACCOUNT_DATA_SOURCE=json simply returns an empty inbox rather than an
+// error, keeping the offline fixture usable without a Supabase connection.
+export async function loadInboxDataset() {
+  try {
+    if (accountDataSource() === "json") return [];
+    const endpoint = new URL(process.env.SUPABASE_URL || "");
+    const key = process.env.SUPABASE_SECRET_KEY;
+    if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password
+      || endpoint.pathname !== "/" || endpoint.search || endpoint.hash || !key) throw new AccountDataError();
+    const headers = { apikey: key, "Content-Type": "application/json" };
+    if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+    const response = await fetch(new URL("/rest/v1/rpc/hub_inbox_dataset", endpoint), {
+      method: "POST", headers, body: "{}", redirect: "error",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) throw new AccountDataError();
+    const data = await response.json();
+    if (!Array.isArray(data)) throw new AccountDataError();
+    return data;
+  } catch {
+    throw new AccountDataError();
+  }
+}

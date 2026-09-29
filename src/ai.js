@@ -75,3 +75,29 @@ export async function approveAction(accountId, nba, signalId = null) {
   }
   return res.json();
 }
+
+// Sprint 16 — Customer Intelligence Inbox, Package 6.
+export async function fetchInboxSignals() {
+  const res = await fetch("/api/inbox", { cache: "no-store" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Request failed (${res.status})`);
+  }
+  const { signals } = await res.json();
+  return signals;
+}
+
+// Gate 1 — the account confirmation itself always requires a session,
+// matching api/confirm-signal-account.js's endpoint-wide identity check.
+export async function confirmSignalAccount(signalId, accountId) {
+  const res = await fetch("/api/confirm-signal-account", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${getAuthToken() || ""}` },
+    body: JSON.stringify({ signalId, accountId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Request failed (${res.status})`);
+  }
+  return res.json();
+}
