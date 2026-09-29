@@ -9,6 +9,9 @@
     "api/approve-action.js": {
       "includeFiles": "data/**"
     },
+    "api/confirm-signal-account.js": {
+      "includeFiles": "data/**"
+    },
     "api/qbr-export.js": {
       "includeFiles": "{data/**,assets/logo-horizontal-light.png,assets/qbr-master/**}"
     }

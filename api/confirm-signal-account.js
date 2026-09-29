@@ -7,13 +7,12 @@
 // (Gate 2 and case management are separate, later pieces of work).
 //
 // confirmedByCsmId is taken from the target account's own assigned CSM
-// (account.csmId), the same simplification Sprint 15C's Gate 2 already uses
-// for reviewedByCsmId — a demo assignment field, not a verified logged-in
-// identity. There is no authentication system in this demo; _security.js's
-// applyGate below is the same origin-allowlist + rate-limit gate every other
-// API endpoint in this app already shares, not per-user auth.
+// (account.csmId) — the fachlich-zustaendiger CSM, unrelated to who is
+// actually logged in. requireDemoAdmin (api/_auth.js) is the real identity
+// check: a verified Supabase session, never a client-supplied CSM ID.
 
 import { applyGate } from "./_security.js";
+import { requireDemoAdmin } from "./_auth.js";
 import { loadAccountDataset } from "./_accounts.js";
 import { confirmSignalAccount } from "./_signal-store.js";
 
@@ -21,6 +20,8 @@ const SIGNAL_ID_PATTERN = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
 export default async function handler(req, res) {
   if (!applyGate(req, res)) return;
+  const user = await requireDemoAdmin(req, res);
+  if (!user) return;
 
   const { signalId, accountId } = req.body || {};
 
@@ -45,7 +46,7 @@ export default async function handler(req, res) {
 
   let confirmed;
   try {
-    confirmed = await confirmSignalAccount(signalId, account.accountId, account.csmId, confirmedAt);
+    confirmed = await confirmSignalAccount(signalId, account.accountId, account.csmId, confirmedAt, user.id);
   } catch {
     return res.status(503).json({ error: "Confirmation could not be saved. Please try again." });
   }
@@ -60,6 +61,6 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     status: "confirmed", signalId, accountId: account.accountId,
-    confirmedByCsmId: account.csmId, confirmedAt,
+    confirmedByCsmId: account.csmId, confirmedByUserId: user.id, confirmedAt,
   });
 }

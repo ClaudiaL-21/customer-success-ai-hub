@@ -37,11 +37,15 @@ const { default: analyzeHandler } = await import("./api/analyze.js");
 const { default: approveActionHandler } = await import("./api/approve-action.js");
 const { default: qbrExportHandler } = await import("./api/qbr-export.js");
 const { default: accountsHandler } = await import("./api/accounts.js");
+const { default: loginHandler } = await import("./api/login.js");
+const { default: confirmSignalAccountHandler } = await import("./api/confirm-signal-account.js");
 const API_ROUTES = {
   "/api/accounts": accountsHandler,
   "/api/analyze": analyzeHandler,
   "/api/approve-action": approveActionHandler,
   "/api/qbr-export": qbrExportHandler,
+  "/api/login": loginHandler,
+  "/api/confirm-signal-account": confirmSignalAccountHandler,
 };
 
 function serveStatic(req, res) {

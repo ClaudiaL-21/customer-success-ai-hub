@@ -32,10 +32,16 @@ async function patchSignal(signalId, expectedStatus, changes) {
 
 // A conditional update is the single-use claim: concurrent review clicks can
 // never both advance a pending proposal to an outbound n8n side effect.
-export function claimSignalReview(signalId, csmId, action, category, rationale, reviewedAt) {
+//
+// Sprint 16 — reviewedByUserId is the real, Supabase-Auth-verified caller
+// (see api/_auth.js), kept deliberately separate from csmId (the account's
+// fachlich-zustaendiger CSM, unrelated to who is actually logged in). Optional
+// so nothing here breaks for a caller that predates the auth gate.
+export function claimSignalReview(signalId, csmId, action, category, rationale, reviewedAt, reviewedByUserId = null) {
   return patchSignal(signalId, "pending", {
     review_status: "claimed", reviewed_by_csm_id: csmId, reviewed_at: reviewedAt,
     reviewed_action: action, reviewed_category: category, reviewed_rationale: rationale,
+    reviewed_by_user_id: reviewedByUserId,
   });
 }
 
@@ -75,9 +81,10 @@ async function patchSignalWhereUnconfirmed(signalId, changes) {
 // for action review, applied here to account confirmation instead. Works
 // identically for matched/unknown/ambiguous signals; match_status is never
 // consulted here, only account_confirmed.
-export function confirmSignalAccount(signalId, accountId, confirmedByCsmId, confirmedAt) {
+export function confirmSignalAccount(signalId, accountId, confirmedByCsmId, confirmedAt, confirmedByUserId = null) {
   return patchSignalWhereUnconfirmed(signalId, {
     confirmed_account_id: accountId, account_confirmed: true,
     confirmed_by_csm_id: confirmedByCsmId, confirmed_at: confirmedAt,
+    confirmed_by_user_id: confirmedByUserId,
   });
 }

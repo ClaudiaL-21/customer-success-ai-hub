@@ -16,6 +16,7 @@
 // alone is no longer sufficient to reach the outside world.
 
 import { applyGate } from "./_security.js";
+import { requireDemoAdmin } from "./_auth.js";
 import { loadAccountDataset } from "./_accounts.js";
 import { computeHealthScore } from "../src/scoring.js";
 import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_APPROVAL_TIMEOUT_MS } from "./_n8n.js";
@@ -41,13 +42,26 @@ export default async function handler(req, res) {
   if (!applyGate(req, res)) return;
 
   const { accountId, action, category, rationale, signalId } = req.body || {};
+  const isSignalReview = signalId !== undefined;
+
+  // Sprint 16 — Confirmed-Gate identity check, as early as possible (before
+  // any account lookup, so an unauthenticated caller learns nothing about
+  // which accountIds exist). Only the signal-based review path (this app's
+  // "Gate 2") requires a verified Supabase session — the pre-existing,
+  // Sprint-02 on-demand NBA approval flow (no signalId) is a separate,
+  // already-shipped feature this package doesn't touch.
+  let user = null;
+  if (isSignalReview) {
+    user = await requireDemoAdmin(req, res);
+    if (!user) return;
+  }
 
   let data;
   try { data = await loadAccountDataset(); }
   catch { return res.status(503).json({ error: "Account data is currently unavailable. Please try again." }); }
   const account = data.accounts.find(a => a.accountId === accountId);
   if (!account) return res.status(404).json({ error: "Unknown accountId" });
-  const isSignalReview = signalId !== undefined;
+
   const signal = isSignalReview && typeof signalId === "string" && /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(signalId)
     ? account.customerSignals?.find(s => s.signalId === signalId) : null;
   if (isSignalReview && (!signal || signal.reviewStatus !== "pending")) {
@@ -101,7 +115,7 @@ export default async function handler(req, res) {
   }
   if (isSignalReview) {
     let claimed;
-    try { claimed = await claimSignalReview(signalId, account.csmId, trimmedAction, category, trimmedRationale, reviewedAt); }
+    try { claimed = await claimSignalReview(signalId, account.csmId, trimmedAction, category, trimmedRationale, reviewedAt, user.id); }
     catch { return res.status(503).json({ error: "Review could not be saved. Nothing was sent." }); }
     if (!claimed) return res.status(409).json({ error: "This signal action was already reviewed." });
   }

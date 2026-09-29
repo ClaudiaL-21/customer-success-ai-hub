@@ -10,6 +10,8 @@ const signalId = "9e232ee6-cfaa-4a30-82d3-665696a44c98";
 process.env.ACCOUNT_DATA_SOURCE = "supabase";
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SECRET_KEY = "test-server-key";
+process.env.SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+process.env.DEMO_ADMIN_EMAIL = "claudia@example.test";
 process.env.ALLOWED_ORIGINS = "http://localhost:test";
 const { default: handler } = await import("../api/confirm-signal-account.js");
 
@@ -17,7 +19,18 @@ let accountConfirmed = false;
 let confirmedAccountId = null;
 let patchAttempts = 0;
 
+// Simulated Supabase Auth users, keyed by the bearer token a test sends.
+const AUTH_USERS = {
+  "valid-admin-token": { id: "user-claudia-uuid", email: "claudia@example.test" },
+  "valid-other-user-token": { id: "user-someone-else-uuid", email: "someone-else@example.test" },
+};
+
 global.fetch = async (url, init) => {
+  if (String(url).endsWith("/auth/v1/user")) {
+    const token = /^Bearer\s+(.+)$/i.exec(init.headers.Authorization || "")?.[1];
+    const user = AUTH_USERS[token];
+    return user ? Response.json(user) : new Response("unauthorized", { status: 401 });
+  }
   if (String(url).endsWith("/rpc/hub_account_dataset")) {
     return Response.json(dataset);
   }
@@ -34,14 +47,33 @@ global.fetch = async (url, init) => {
   throw new Error(`Unexpected test request: ${url}`);
 };
 
-function call(body) {
+function call(body, token = "valid-admin-token") {
   return new Promise((resolve, reject) => {
-    const req = { method: "POST", headers: { origin: "http://localhost:test" }, socket: {}, body };
+    const headers = { origin: "http://localhost:test" };
+    if (token) headers.authorization = `Bearer ${token}`;
+    const req = { method: "POST", headers, socket: {}, body };
     const res = { statusCode: 200, status(code) { this.statusCode = code; return this; }, setHeader() {},
       json(value) { resolve({ status: this.statusCode, body: value }); }, end() { resolve({ status: this.statusCode }); } };
     Promise.resolve(handler(req, res)).catch(reject);
   });
 }
+
+test("rejects a call with no Authorization header at all — 401, before any account lookup", async () => {
+  const result = await call({ signalId, accountId: account.accountId }, null);
+  assert.equal(result.status, 401);
+  assert.equal(patchAttempts, 0);
+});
+
+test("rejects a valid session token belonging to a non-admin user — 403, not silently allowed", async () => {
+  const result = await call({ signalId, accountId: account.accountId }, "valid-other-user-token");
+  assert.equal(result.status, 403);
+  assert.equal(patchAttempts, 0);
+});
+
+test("rejects an unrecognized/invalid bearer token — 401", async () => {
+  const result = await call({ signalId, accountId: account.accountId }, "totally-made-up-token");
+  assert.equal(result.status, 401);
+});
 
 test("confirms an unconfirmed signal exactly once and rejects a repeat attempt (atomic, no silent overwrite)", async () => {
   const body = { signalId, accountId: account.accountId };
@@ -50,6 +82,7 @@ test("confirms an unconfirmed signal exactly once and rejects a repeat attempt (
   assert.equal(first.body.status, "confirmed");
   assert.equal(first.body.accountId, account.accountId);
   assert.equal(first.body.confirmedByCsmId, account.csmId);
+  assert.equal(first.body.confirmedByUserId, "user-claudia-uuid");
   assert.ok(first.body.confirmedAt);
   assert.equal(accountConfirmed, true);
   assert.equal(confirmedAccountId, account.accountId);

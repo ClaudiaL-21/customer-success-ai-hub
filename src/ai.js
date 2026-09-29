@@ -1,3 +1,5 @@
+import { getAuthToken } from "./auth.js";
+
 async function callAnalyze(body) {
   const res = await fetch("/api/analyze", {
     method: "POST",
@@ -58,9 +60,15 @@ export async function generateQbrPptx(accountId, sections) {
 }
 
 export async function approveAction(accountId, nba, signalId = null) {
+  // Sprint 16 — only the signal-based review path ("Gate 2" in the Customer
+  // Intelligence Inbox sense) requires a Supabase session; the pre-existing
+  // on-demand NBA approval flow (no signalId) stays unauthenticated, matching
+  // api/approve-action.js's own scoping of this requirement.
+  const headers = { "content-type": "application/json" };
+  if (signalId) headers.authorization = `Bearer ${getAuthToken() || ""}`;
   const res = await fetch("/api/approve-action", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify({ accountId, action: nba.action, category: nba.category, rationale: nba.rationale, ...(signalId ? { signalId } : {}) }),
   });
   if (!res.ok) {

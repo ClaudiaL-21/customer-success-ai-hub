@@ -1345,3 +1345,32 @@ footer { text-align: center; color: var(--muted); font-size: 11px; padding: 20px
   .review-actions { flex-direction: column; }
   .review-cancel-btn, .review-confirm-btn { width: 100%; }
 }
+
+/* Sprint 16 — minimal login gate (src/auth.js). Deliberately plain: this
+   covers the whole page until a session exists, then is removed entirely —
+   not a persistent app surface, so it borrows the existing token system
+   without adding a new component family. */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--navy);
+}
+.auth-form {
+  width: 320px; max-width: calc(100vw - var(--space-6));
+  background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+  padding: var(--space-6) var(--space-5);
+  display: flex; flex-direction: column; gap: var(--space-3);
+}
+.auth-form h2 { margin: 0; font-size: 18px; color: var(--text); }
+.auth-form .sub { margin: 0 0 var(--space-2); color: var(--muted); font-size: 13px; }
+.auth-form input {
+  padding: var(--space-2) var(--space-3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 14px;
+}
+.auth-form input:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--teal); }
+.auth-form button {
+  padding: var(--space-2) var(--space-3); border: none; border-radius: var(--radius-sm);
+  background: var(--teal); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer;
+}
+.auth-form button:disabled { opacity: 0.6; cursor: default; }
+.auth-form .auth-error { margin: 0; color: var(--red); font-size: 13px; }
