@@ -20,6 +20,9 @@ const ACCOUNTS = JSON.parse(
 
 const TEST_ORIGIN = "http://localhost:test-runner";
 process.env.ALLOWED_ORIGINS = TEST_ORIGIN;
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+process.env.DEMO_ADMIN_EMAIL = "claudia@example.test";
 
 // Must run BEFORE api/approve-action.js is loaded: that module reads
 // N8N_APPROVAL_WEBHOOK_URL into a module-level const at import time. A static
@@ -46,9 +49,28 @@ function findAccount(riskCategory) {
 const HIGH_RISK_ACCOUNT = findAccount("high");
 const LOW_RISK_ACCOUNT = findAccount("low");
 
-function callHandler(body) {
+// Sprint 16 — the whole endpoint now requires a verified Supabase session
+// (see api/approve-action.js). Only the /auth/v1/user check is intercepted;
+// everything else (no external n8n call happens in this file at all) is
+// untouched by this addition.
+const AUTH_USERS = {
+  "valid-admin-token": { id: "user-claudia-uuid", email: "claudia@example.test" },
+  "valid-other-user-token": { id: "user-someone-else-uuid", email: "someone-else@example.test" },
+};
+global.fetch = async (url, init) => {
+  if (String(url).endsWith("/auth/v1/user")) {
+    const token = /^Bearer\s+(.+)$/i.exec(init.headers.Authorization || "")?.[1];
+    const user = AUTH_USERS[token];
+    return user ? Response.json(user) : new Response("unauthorized", { status: 401 });
+  }
+  throw new Error(`Unexpected test request: ${url}`);
+};
+
+function callHandler(body, token = "valid-admin-token") {
   return new Promise((resolve, reject) => {
-    const req = { method: "POST", headers: { origin: TEST_ORIGIN }, socket: {}, body };
+    const headers = { origin: TEST_ORIGIN };
+    if (token) headers.authorization = `Bearer ${token}`;
+    const req = { method: "POST", headers, socket: {}, body };
     const res = {
       statusCode: 200,
       status(code) { this.statusCode = code; return this; },
@@ -59,6 +81,22 @@ function callHandler(body) {
     Promise.resolve(handler(req, res)).catch(reject);
   });
 }
+
+test("rejects an unauthenticated call with 401 — no account lookup, no external action", async () => {
+  const { statusCode } = await callHandler(
+    { accountId: LOW_RISK_ACCOUNT.accountId, action: "Call the customer.", category: "risk_mitigation", rationale: "x" },
+    null,
+  );
+  assert.equal(statusCode, 401);
+});
+
+test("rejects a valid session belonging to a non-admin user with 403 — no external action", async () => {
+  const { statusCode } = await callHandler(
+    { accountId: LOW_RISK_ACCOUNT.accountId, action: "Call the customer.", category: "risk_mitigation", rationale: "x" },
+    "valid-other-user-token",
+  );
+  assert.equal(statusCode, 403);
+});
 
 test("empty action is rejected", async () => {
   const { statusCode, body } = await callHandler({

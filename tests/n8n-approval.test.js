@@ -39,12 +39,34 @@ process.env.N8N_APPROVAL_TIMEOUT_MS = "150"; // short on purpose, keeps the time
 // Development Day 2 hardening — this file exercises the real-workflow path
 // on purpose, so it must opt in explicitly like a real live-demo would.
 process.env.ENABLE_EXTERNAL_ACTIONS = "true";
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+process.env.DEMO_ADMIN_EMAIL = "claudia@example.test";
 
 const { default: handler } = await import("../api/approve-action.js");
 
-function callHandler(body) {
+// Sprint 16 — intercept only the Supabase Auth check; everything else (the
+// real loopback dummy server above, simulating the real n8n webhook) goes
+// through the real fetch.
+const AUTH_USERS = {
+  "valid-admin-token": { id: "user-claudia-uuid", email: "claudia@example.test" },
+  "valid-other-user-token": { id: "user-someone-else-uuid", email: "someone-else@example.test" },
+};
+const realFetch = globalThis.fetch;
+global.fetch = async (url, init) => {
+  if (String(url).endsWith("/auth/v1/user")) {
+    const token = /^Bearer\s+(.+)$/i.exec(init.headers.Authorization || "")?.[1];
+    const user = AUTH_USERS[token];
+    return user ? Response.json(user) : new Response("unauthorized", { status: 401 });
+  }
+  return realFetch(url, init);
+};
+
+function callHandler(body, token = "valid-admin-token") {
   return new Promise((resolve, reject) => {
-    const req = { method: "POST", headers: { origin: TEST_ORIGIN }, socket: {}, body };
+    const headers = { origin: TEST_ORIGIN };
+    if (token) headers.authorization = `Bearer ${token}`;
+    const req = { method: "POST", headers, socket: {}, body };
     const res = {
       statusCode: 200,
       status(code) { this.statusCode = code; return this; },
@@ -55,6 +77,38 @@ function callHandler(body) {
     Promise.resolve(handler(req, res)).catch(reject);
   });
 }
+
+test("an unauthenticated call is rejected with 401 and never reaches the real webhook", async () => {
+  requestCount = 0;
+  const { statusCode } = await callHandler({
+    accountId: LOW_RISK_ACCOUNT.accountId, action: "Call the customer.", category: "risk_mitigation", rationale: "x",
+  }, null);
+  assert.equal(statusCode, 401);
+  assert.equal(requestCount, 0, "the dummy webhook server must never have been called");
+});
+
+test("a valid session belonging to a non-admin user is rejected with 403 and never reaches the real webhook", async () => {
+  requestCount = 0;
+  const { statusCode } = await callHandler({
+    accountId: LOW_RISK_ACCOUNT.accountId, action: "Call the customer.", category: "risk_mitigation", rationale: "x",
+  }, "valid-other-user-token");
+  assert.equal(statusCode, 403);
+  assert.equal(requestCount, 0, "the dummy webhook server must never have been called");
+});
+
+test("the payload sent to the real webhook includes reviewedByUserId, distinct from csmName", async () => {
+  let received;
+  currentHandler = (req, body, res) => {
+    received = JSON.parse(body);
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ status: "sent", workflowConnected: true }));
+  };
+  await callHandler({
+    accountId: LOW_RISK_ACCOUNT.accountId, action: "Call the customer.", category: "risk_mitigation", rationale: "x",
+  });
+  assert.equal(received.reviewedByUserId, "user-claudia-uuid");
+  assert.notEqual(received.reviewedByUserId, received.csmName);
+});
 
 test("approval webhook call carries the shared secret header and the CSM-reviewed payload, incl. reviewedByHuman", async () => {
   let received;

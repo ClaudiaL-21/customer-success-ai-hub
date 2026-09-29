@@ -46,15 +46,16 @@ export default async function handler(req, res) {
 
   // Sprint 16 — Confirmed-Gate identity check, as early as possible (before
   // any account lookup, so an unauthenticated caller learns nothing about
-  // which accountIds exist). Only the signal-based review path (this app's
-  // "Gate 2") requires a verified Supabase session — the pre-existing,
-  // Sprint-02 on-demand NBA approval flow (no signalId) is a separate,
-  // already-shipped feature this package doesn't touch.
-  let user = null;
-  if (isSignalReview) {
-    user = await requireDemoAdmin(req, res);
-    if (!user) return;
-  }
+  // which accountIds exist). PO decision (manual-approval-security round):
+  // applies to the WHOLE endpoint now, not just the signal-based path — the
+  // pre-existing on-demand NBA approval flow has real external side effects
+  // too (a real Sheet row + email once ENABLE_EXTERNAL_ACTIONS=true) and must
+  // not be reachable without a verified, authorized session either. No
+  // client-supplied CSM ID is ever accepted as identity proof — the account's
+  // own csmId is still derived server-side exactly as before, unrelated to
+  // this check.
+  const user = await requireDemoAdmin(req, res);
+  if (!user) return;
 
   let data;
   try { data = await loadAccountDataset(); }
@@ -105,11 +106,17 @@ export default async function handler(req, res) {
     rationale: trimmedRationale,
     reviewedByHuman: true,
     approvedAt: reviewedAt,
+    // Sprint 16 — the real, Supabase-Auth-verified person, kept distinct from
+    // csmName (the account's fachlich-zustaendiger CSM) in every audit trail,
+    // including the legacy on-demand NBA path, not just signal-based reviews.
+    reviewedByUserId: user.id,
   };
 
-  // Keep legacy on-demand NBA approvals unchanged. Signal approvals reuse
-  // this same decision endpoint, with an atomic persistent claim before any
-  // outward call. The reviewer label is a demo CSM assignment, not login proof.
+  // Legacy on-demand NBA approvals and signal-based reviews share this same
+  // decision endpoint and, as of the identity check above, the same session
+  // requirement. Signal approvals additionally get an atomic persistent
+  // claim before any outward call; csmName remains a fachlich-zustaendiger
+  // label derived server-side, never login proof by itself.
   if (isSignalReview && N8N_APPROVAL_WEBHOOK_URL && EXTERNAL_ACTIONS_ENABLED && !hasWebhookSecret()) {
     return res.status(503).json({ error: "Approval workflow is misconfigured (missing webhook secret). Contact the workflow owner." });
   }

@@ -35,12 +35,28 @@ delete process.env.N8N_WEBHOOK_SECRET; // the condition under test
 // "URL set, secret missing" misconfiguration path instead of being masked by
 // the (also-true-here) "external actions disabled" fallback.
 process.env.ENABLE_EXTERNAL_ACTIONS = "true";
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+process.env.DEMO_ADMIN_EMAIL = "claudia@example.test";
 
 const { default: handler } = await import("../api/approve-action.js");
 
+// Sprint 16 — intercept only the Supabase Auth check; everything else
+// (the real loopback dummy server above) goes through the real fetch.
+const realFetch = globalThis.fetch;
+global.fetch = async (url, init) => {
+  if (String(url).endsWith("/auth/v1/user")) {
+    const token = /^Bearer\s+(.+)$/i.exec(init.headers.Authorization || "")?.[1];
+    return token === "valid-admin-token"
+      ? Response.json({ id: "user-claudia-uuid", email: "claudia@example.test" })
+      : new Response("unauthorized", { status: 401 });
+  }
+  return realFetch(url, init);
+};
+
 function callHandler(body) {
   return new Promise((resolve, reject) => {
-    const req = { method: "POST", headers: { origin: TEST_ORIGIN }, socket: {}, body };
+    const req = { method: "POST", headers: { origin: TEST_ORIGIN, authorization: "Bearer valid-admin-token" }, socket: {}, body };
     const res = {
       statusCode: 200,
       status(code) { this.statusCode = code; return this; },
