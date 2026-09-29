@@ -19,6 +19,7 @@ import { applyGate } from "./_security.js";
 import { loadAccountDataset } from "./_accounts.js";
 import { computeHealthScore } from "../src/scoring.js";
 import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_APPROVAL_TIMEOUT_MS } from "./_n8n.js";
+import { claimSignalReview, finishSignalReview } from "./_signal-store.js";
 
 const N8N_APPROVAL_WEBHOOK_URL = process.env.N8N_APPROVAL_WEBHOOK_URL;
 // Must be exactly the string "true" — missing, empty, "false", or any other
@@ -39,13 +40,19 @@ const APPROVAL_TIMEOUT_MS = resolveTimeoutMs(process.env.N8N_APPROVAL_TIMEOUT_MS
 export default async function handler(req, res) {
   if (!applyGate(req, res)) return;
 
-  const { accountId, action, category, rationale } = req.body || {};
+  const { accountId, action, category, rationale, signalId } = req.body || {};
 
   let data;
   try { data = await loadAccountDataset(); }
   catch { return res.status(503).json({ error: "Account data is currently unavailable. Please try again." }); }
   const account = data.accounts.find(a => a.accountId === accountId);
   if (!account) return res.status(404).json({ error: "Unknown accountId" });
+  const isSignalReview = signalId !== undefined;
+  const signal = isSignalReview && typeof signalId === "string" && /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(signalId)
+    ? account.customerSignals?.find(s => s.signalId === signalId) : null;
+  if (isSignalReview && (!signal || signal.reviewStatus !== "pending")) {
+    return res.status(409).json({ error: "This signal action is not pending review." });
+  }
 
   const trimmedAction = String(action ?? "").trim();
   if (!trimmedAction) {
@@ -63,6 +70,9 @@ export default async function handler(req, res) {
   if (!VALID_CATEGORIES.includes(category)) {
     return res.status(400).json({ error: `Category must be one of: ${VALID_CATEGORIES.join(", ")}` });
   }
+  if (signal?.type === "risk" && category !== "risk_mitigation") {
+    return res.status(400).json({ error: "A risk signal requires risk mitigation review." });
+  }
 
   const health = computeHealthScore(account);
   if (health.riskCategory === "high" && category === "growth") {
@@ -70,6 +80,7 @@ export default async function handler(req, res) {
   }
 
   const csm = data.csms.find(c => c.csmId === account.csmId);
+  const reviewedAt = new Date().toISOString();
 
   const payload = {
     accountId: account.accountId,
@@ -79,12 +90,30 @@ export default async function handler(req, res) {
     category,
     rationale: trimmedRationale,
     reviewedByHuman: true,
-    approvedAt: new Date().toISOString(),
+    approvedAt: reviewedAt,
   };
+
+  // Keep legacy on-demand NBA approvals unchanged. Signal approvals reuse
+  // this same decision endpoint, with an atomic persistent claim before any
+  // outward call. The reviewer label is a demo CSM assignment, not login proof.
+  if (isSignalReview && N8N_APPROVAL_WEBHOOK_URL && EXTERNAL_ACTIONS_ENABLED && !hasWebhookSecret()) {
+    return res.status(503).json({ error: "Approval workflow is misconfigured (missing webhook secret). Contact the workflow owner." });
+  }
+  if (isSignalReview) {
+    let claimed;
+    try { claimed = await claimSignalReview(signalId, account.csmId, trimmedAction, category, trimmedRationale, reviewedAt); }
+    catch { return res.status(503).json({ error: "Review could not be saved. Nothing was sent." }); }
+    if (!claimed) return res.status(409).json({ error: "This signal action was already reviewed." });
+  }
 
   if (!EXTERNAL_ACTIONS_ENABLED || !N8N_APPROVAL_WEBHOOK_URL) {
     const reason = !EXTERNAL_ACTIONS_ENABLED ? "ENABLE_EXTERNAL_ACTIONS is not \"true\"" : "no n8n webhook configured";
-    console.log(`Human-approved action (${reason}, logged only):`, payload);
+    if (isSignalReview) {
+      try { await finishSignalReview(signalId, "logged"); }
+      catch { return res.status(503).json({ error: "Review outcome could not be saved. Do not retry automatically." }); }
+    } else {
+      console.log(`Human-approved action (${reason}, logged only):`, payload);
+    }
     return res.status(200).json({ status: "logged", workflowConnected: false });
   }
 
@@ -117,12 +146,18 @@ export default async function handler(req, res) {
       && body.status === "sent" && body.workflowConnected === true;
 
     if (!isConfirmedSuccess) {
+      if (isSignalReview) await finishSignalReview(signalId, "uncertain").catch(() => {});
       console.error("approve-action.js: n8n webhook returned a 2xx status but did not confirm success (invalid or unexpected response contract).");
       return res.status(502).json({ error: "The approval workflow did not confirm success. Nothing was retried automatically." });
     }
 
+    if (isSignalReview) {
+      try { await finishSignalReview(signalId, "sent"); }
+      catch { return res.status(503).json({ error: "Workflow accepted the action, but the saved outcome is uncertain. Do not retry." }); }
+    }
     return res.status(200).json({ status: "sent", workflowConnected: true });
   } catch (err) {
+    if (isSignalReview) await finishSignalReview(signalId, "uncertain").catch(() => {});
     console.error("approve-action.js n8n webhook error:", err.message);
     return res.status(502).json({ error: "Could not reach the approval workflow. Nothing was retried automatically." });
   }

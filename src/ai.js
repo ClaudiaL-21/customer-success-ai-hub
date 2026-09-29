@@ -57,11 +57,11 @@ export async function generateQbrPptx(accountId, sections) {
   return { blob, filename: match ? match[1] : "Customer-QBR.pptx" };
 }
 
-export async function approveAction(accountId, nba) {
+export async function approveAction(accountId, nba, signalId = null) {
   const res = await fetch("/api/approve-action", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ accountId, action: nba.action, category: nba.category, rationale: nba.rationale }),
+    body: JSON.stringify({ accountId, action: nba.action, category: nba.category, rationale: nba.rationale, ...(signalId ? { signalId } : {}) }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

@@ -1,0 +1,2 @@
+[functions.customer-signal-ingress]
+verify_jwt = false # The handler requires the dedicated n8n token before reading a payload.

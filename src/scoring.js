@@ -123,7 +123,7 @@ function scoreQBROverdue(account) {
   };
 }
 
-export function computeHealthScore(account) {
+export function computeBaseHealthScore(account) {
   const criteria = [
     scoreUsageDecline(account),
     scoreRecurringTicket(account),
@@ -143,6 +143,29 @@ export function computeHealthScore(account) {
   const riskCategory = riskPoints >= 60 ? "high" : riskPoints >= 30 ? "medium" : "low";
 
   return { score, riskCategory, criteria: criteria.sort((a, b) => b.points - a.points) };
+}
+
+// The original eight-factor snapshot stays intact. Live email risk is a
+// separately explained adjustment; the strongest matched risk signal wins,
+// so duplicate/related emails cannot stack an unbounded penalty.
+export function computeHealthScore(account) {
+  const base = computeBaseHealthScore(account);
+  const riskSignals = (account.customerSignals || []).filter(s => s.type === "risk"
+    && Number.isInteger(s.healthDelta) && [-10, -5].includes(s.healthDelta));
+  const strongest = riskSignals.reduce((best, signal) =>
+    !best || signal.healthDelta < best.healthDelta ? signal : best, null);
+  const signalDelta = strongest?.healthDelta ?? 0;
+  const baseRiskPoints = base.criteria.reduce((sum, c) => sum + c.points, 0);
+  const effectiveRiskPoints = baseRiskPoints - signalDelta;
+  return {
+    ...base,
+    score: Math.max(0, base.score + signalDelta),
+    riskCategory: effectiveRiskPoints >= 60 ? "high" : effectiveRiskPoints >= 30 ? "medium" : "low",
+    baseScore: base.score,
+    signalDelta,
+    signalId: strongest?.signalId ?? null,
+    signalRule: strongest?.healthRule ?? null,
+  };
 }
 
 export function computeExpansionScore(account) {

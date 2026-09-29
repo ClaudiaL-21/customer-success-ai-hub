@@ -54,6 +54,12 @@ let state = {
 };
 
 async function init() {
+  await refreshAccountData();
+  bindControls();
+  render();
+}
+
+async function refreshAccountData() {
   const res = await fetch("/api/accounts", { cache: "no-store" });
   if (!res.ok) throw new Error("Account data is currently unavailable");
   const data = await res.json();
@@ -69,8 +75,6 @@ async function init() {
   // live" framing is unavoidable rather than buried in the Trust view alone.
   const snapshotEl = document.getElementById("topbar-snapshot");
   if (snapshotEl) snapshotEl.textContent = `Snapshot as of ${fmtDate(REFERENCE_DATE_ISO)}`;
-  bindControls();
-  render();
 }
 
 function bindControls() {
@@ -791,7 +795,7 @@ function renderAccountDetail(acc) {
     <div class="detail-grid">
       <div>
         <h4>Score Breakdown</h4>
-        <p class="sub">Risk points per criterion — the total is subtracted from the Health Score (100). Health Score ${acc.health.score} = 100 − ${Math.round(acc.health.criteria.reduce((s, c) => s + c.points, 0))} risk points.</p>
+        <p class="sub">Eight-factor snapshot: ${acc.health.baseScore} = 100 − ${Math.round(acc.health.criteria.reduce((s, c) => s + c.points, 0))} risk points.${acc.health.signalDelta ? ` Customer signal: ${acc.health.signalDelta} → current Health Score ${acc.health.score}.` : ""}</p>
         ${trendRow}
         <table class="breakdown-table"><tbody>${criteriaRows}</tbody></table>
       </div>
@@ -810,14 +814,48 @@ function renderAccountDetail(acc) {
         ${artifacts}
       </div>
     </div>
+    <div class="ai-section customer-signals" id="customer-signals-${acc.accountId}"></div>
     <div class="ai-section" id="ai-section-${acc.accountId}"></div>
     <div class="ai-section qbr-section" id="qbr-section-${acc.accountId}"></div>
   `;
 
+  renderCustomerSignals(div.querySelector(`#customer-signals-${acc.accountId}`), acc);
   renderAiSection(div.querySelector(`#ai-section-${acc.accountId}`), acc);
   renderQbrSection(div.querySelector(`#qbr-section-${acc.accountId}`), acc);
   div.appendChild(renderAccountActivity(acc));
   return div;
+}
+
+function renderCustomerSignals(container, acc) {
+  const signals = acc.customerSignals || [];
+  container.innerHTML = `<h4>Customer Signals <span class="ai-disclaimer">— persistent, classified from demo email</span></h4>`;
+  if (!signals.length) {
+    container.insertAdjacentHTML("beforeend", `<p class="sub">No new email signals for this account.</p>`);
+    return;
+  }
+  for (const signal of signals) {
+    const card = document.createElement("div");
+    card.className = "nba-box nba-box-risk";
+    const effect = signal.signalId === acc.health.signalId ? signal.healthDelta : 0;
+    card.innerHTML = `
+      <p class="nba-label">${escapeHtml(signal.type)} · ${escapeHtml(signal.topic)} · ${escapeHtml(signal.urgency)} urgency</p>
+      <p>${escapeHtml(signal.summary)}</p>
+      <p class="sub">Sentiment: ${escapeHtml(signal.sentiment)} · Evidence: ${escapeHtml(signal.evidence)}</p>
+      <p class="sub">Health effect: ${effect} points${effect ? ` (${escapeHtml(signal.healthRule)}; base ${acc.health.baseScore} → ${acc.health.score})` : " (strongest risk signal already counted or no risk adjustment)"} · Received ${fmtDateTime(signal.createdAt)}</p>
+      ${signal.proposedAction ? `<p><strong>Next Best Action — ${signal.reviewStatus === "pending" ? "Pending human review" : escapeHtml(signal.reviewStatus)}</strong></p><p>${escapeHtml(signal.proposedAction)}</p><p class="sub">${escapeHtml(signal.proposedRationale)}</p>` : ""}
+      <div class="signal-review"></div>`;
+    container.appendChild(card);
+    if (!signal.proposedAction) continue;
+    const review = card.querySelector(".signal-review");
+    if (signal.reviewStatus === "pending") {
+      renderApprovalControl(review, acc.accountId, {
+        category: signal.type === "growth" ? "growth" : "risk_mitigation",
+        action: signal.proposedAction, rationale: signal.proposedRationale,
+      }, signal.signalId);
+    } else {
+      review.innerHTML = `<p class="approval-confirm">Review status: ${escapeHtml(signal.reviewStatus)}${signal.reviewedAt ? ` · ${fmtDateTime(signal.reviewedAt)}` : ""}${signal.reviewedByCsmId ? ` · Demo CSM ${escapeHtml(signal.reviewedByCsmId)} (identity not verified)` : ""}</p>`;
+    }
+  }
 }
 
 // Development Day 2 — Account Activity Feed. Purely additive read of
@@ -946,11 +984,12 @@ function renderAiSection(container, acc) {
 // confirm before anything reaches /api/approve-action. Draft edits live in
 // state.approvals[accountId].draft (not local DOM state) so they survive any
 // re-render (e.g. after a validation error) without reverting to the AI original.
-function renderApprovalControl(container, accountId, nba) {
-  const approval = state.approvals[accountId] || { status: "idle" };
+function renderApprovalControl(container, accountId, nba, signalId = null) {
+  const approvalKey = signalId || accountId;
+  const approval = state.approvals[approvalKey] || { status: "idle" };
 
   if (approval.status === "reviewing" || approval.status === "pending" || approval.status === "error") {
-    renderReviewForm(container, accountId, nba, approval);
+    renderReviewForm(container, accountId, nba, approval, signalId);
     return;
   }
 
@@ -967,7 +1006,7 @@ function renderApprovalControl(container, accountId, nba) {
   btn.className = "ai-load-btn approve-btn";
   btn.textContent = "Review action";
   btn.addEventListener("click", () => {
-    state.approvals[accountId] = {
+    state.approvals[approvalKey] = {
       status: "reviewing",
       draft: { category: nba.category, action: nba.action, rationale: nba.rationale },
     };
@@ -987,7 +1026,7 @@ function reviewCategoryMeta(category) {
     : { label: "Risk Mitigation", riskClass: "risk-high" };
 }
 
-function renderReviewForm(container, accountId, nba, approval) {
+function renderReviewForm(container, accountId, nba, approval, signalId = null) {
   const draft = approval.draft;
   const disabled = approval.status === "pending";
   const badgeMeta = reviewCategoryMeta(draft.category);
@@ -1011,7 +1050,7 @@ function renderReviewForm(container, accountId, nba, approval) {
       <label class="review-field">Category
         <select class="review-category" ${disabled ? "disabled" : ""}>
           <option value="risk_mitigation" ${draft.category === "risk_mitigation" ? "selected" : ""}>Risk mitigation</option>
-          <option value="growth" ${draft.category === "growth" ? "selected" : ""}>Growth</option>
+          ${!signalId || nba.category === "growth" ? `<option value="growth" ${draft.category === "growth" ? "selected" : ""}>Growth</option>` : ""}
         </select>
       </label>
       <label class="review-field">Recommended action
@@ -1058,17 +1097,17 @@ function renderReviewForm(container, accountId, nba, approval) {
 
   if (!disabled) {
     container.querySelector(".review-cancel-btn").addEventListener("click", () => {
-      state.approvals[accountId] = { status: "idle" };
+      state.approvals[signalId || accountId] = { status: "idle" };
       render();
     });
     container.querySelector(".review-confirm-btn").addEventListener("click", () => {
       const validationError = reviewValidationError(draft);
       if (validationError) {
-        state.approvals[accountId] = { status: "reviewing", draft, validationError };
+        state.approvals[signalId || accountId] = { status: "reviewing", draft, validationError };
         render();
         return;
       }
-      submitApproval(accountId, draft);
+      submitApproval(accountId, draft, signalId);
     });
   }
 }
@@ -1083,16 +1122,20 @@ function reviewValidationError(draft) {
   return null;
 }
 
-async function submitApproval(accountId, draft) {
-  state.approvals[accountId] = { status: "pending", draft };
+async function submitApproval(accountId, draft, signalId = null) {
+  const approvalKey = signalId || accountId;
+  state.approvals[approvalKey] = { status: "pending", draft };
   render();
   try {
-    const result = await approveAction(accountId, draft);
+    const result = await approveAction(accountId, draft, signalId);
     // `at`: real runtime capture of the moment this resolved — feeds the
     // Account Activity Feed (src/activity.js). Never backfilled elsewhere.
-    state.approvals[accountId] = { status: "done", result, at: new Date().toISOString() };
+    state.approvals[approvalKey] = { status: "done", result, at: new Date().toISOString() };
   } catch (e) {
-    state.approvals[accountId] = { status: "error", draft, error: e.message, at: new Date().toISOString() };
+    state.approvals[approvalKey] = { status: "error", draft, error: e.message, at: new Date().toISOString() };
+  }
+  if (signalId) {
+    try { await refreshAccountData(); } catch { /* keep the review result visible; refresh on reload */ }
   }
   render();
 }
