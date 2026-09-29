@@ -148,10 +148,25 @@ export function computeBaseHealthScore(account) {
 // The original eight-factor snapshot stays intact. Live email risk is a
 // separately explained adjustment; the strongest matched risk signal wins,
 // so duplicate/related emails cannot stack an unbounded penalty.
+//
+// Sprint 16 — Customer Intelligence Inbox, Package 4 (Confirmed-Gate): a
+// signal only counts here once its account link is human-confirmed
+// (accountConfirmed) and it isn't tied to a resolved case (caseActive).
+// Both checks use `!== false` rather than `=== true` on purpose: neither
+// field exists on any signal object built before this package (every
+// existing test fixture, and every historical Sprint 15C row surfaced
+// through hub_account_dataset()'s pre-Package-4 shape), so `undefined`
+// must keep behaving exactly like it always has — only an explicit `false`
+// (which only Package 5's genuinely-unconfirmed signals, or a resolved
+// case, will ever produce) excludes a signal. caseActive has no real
+// effect yet (no case lifecycle exists to ever set it false today) — the
+// check is wired in now so Package 9 can flip it later without touching
+// this function again.
 export function computeHealthScore(account) {
   const base = computeBaseHealthScore(account);
   const riskSignals = (account.customerSignals || []).filter(s => s.type === "risk"
-    && Number.isInteger(s.healthDelta) && [-10, -5].includes(s.healthDelta));
+    && Number.isInteger(s.healthDelta) && [-10, -5].includes(s.healthDelta)
+    && s.accountConfirmed !== false && s.caseActive !== false);
   const strongest = riskSignals.reduce((best, signal) =>
     !best || signal.healthDelta < best.healthDelta ? signal : best, null);
   const signalDelta = strongest?.healthDelta ?? 0;

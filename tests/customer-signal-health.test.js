@@ -34,3 +34,47 @@ test("AI context states both scores and treats the email as unverified", () => {
   assert.match(text, /customer email signal adjustment: -5/);
   assert.match(text, /AI-classified customer statements, not verified facts/);
 });
+
+// Package 4 — Confirmed-Gate: unbestaetigte oder case-resolved Signale duerfen
+// keine Health-Wirkung haben, aber jedes bestehende Fixture oben (ohne
+// accountConfirmed/caseActive gesetzt) muss unveraendert weiter funktionieren.
+
+test("an unconfirmed risk signal (accountConfirmed: false) has zero health effect, even as the only signal", () => {
+  const withSignal = { ...account, customerSignals: [{ ...signal("one", -10), accountConfirmed: false }] };
+  const health = computeHealthScore(withSignal);
+  assert.equal(health.score, computeBaseHealthScore(account).score);
+  assert.equal(health.signalDelta, 0);
+  assert.equal(health.signalId, null);
+});
+
+test("an unconfirmed signal never wins over a weaker but confirmed one", () => {
+  const withSignals = { ...account, customerSignals: [
+    { ...signal("unconfirmed-strong", -10), accountConfirmed: false },
+    { ...signal("confirmed-weak", -5), accountConfirmed: true },
+  ] };
+  const health = computeHealthScore(withSignals);
+  assert.equal(health.score, computeBaseHealthScore(account).score - 5);
+  assert.equal(health.signalId, "confirmed-weak");
+});
+
+test("a signal without an accountConfirmed field at all behaves exactly as before this package (backward compatibility)", () => {
+  // No `accountConfirmed` key present, same as every historical Sprint 15C
+  // row and every pre-Package-4 test fixture in this file.
+  const withSignal = { ...account, customerSignals: [signal("legacy", -10)] };
+  const health = computeHealthScore(withSignal);
+  assert.equal(health.score, computeBaseHealthScore(account).score - 10);
+  assert.equal(health.signalId, "legacy");
+});
+
+test("a signal tied to a resolved case (caseActive: false) has zero health effect — structural prep for later case lifecycle work", () => {
+  const withSignal = { ...account, customerSignals: [{ ...signal("one", -10), accountConfirmed: true, caseActive: false }] };
+  const health = computeHealthScore(withSignal);
+  assert.equal(health.score, computeBaseHealthScore(account).score);
+  assert.equal(health.signalDelta, 0);
+});
+
+test("a confirmed signal with an active (or no) case keeps affecting health as today", () => {
+  const withSignal = { ...account, customerSignals: [{ ...signal("one", -10), accountConfirmed: true, caseActive: true }] };
+  const health = computeHealthScore(withSignal);
+  assert.equal(health.score, computeBaseHealthScore(account).score - 10);
+});
