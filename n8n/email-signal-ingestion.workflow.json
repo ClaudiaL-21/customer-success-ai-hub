@@ -1,0 +1,212 @@
+{
+  "name": "Email Signal Ingestion (Sprint 15C)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [16, 208],
+      "id": "c0b1bc31-25aa-4114-a432-2220fc2a8ee1",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account (inbox to monitor)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [176, 208],
+      "id": "824642fc-cc0f-4b08-9986-33d2f55224ec",
+      "name": "Get a message",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account (inbox to monitor)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const messageId = $json.id;\n\nconst fromField = $json.From || $json.from;\nlet senderEmail = \"unknown\";\nif (typeof fromField === \"string\") {\n  const m = fromField.match(/([a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,})/i);\n  senderEmail = m ? m[1] : fromField;\n} else if (fromField && fromField.value && fromField.value[0]) {\n  senderEmail = fromField.value[0].address;\n}\n\nconst subject = $json.Subject || $json.subject || \"(no subject)\";\nconst body = $json.text || $json.snippet || $json.html || \"(no body)\";\n\nconst systemPrompt = `You are a customer signal classifier. Classify this email as risk, growth, or routine.\n\nReturn ONLY valid JSON:\n- topic (1-100 chars)\n- signalType (\"risk\"|\"growth\"|\"routine\")\n- sentiment (\"positive\"|\"neutral\"|\"negative\")\n- urgency (\"low\"|\"medium\"|\"high\")\n- summary (1-500 chars)\n- evidence (1-300 chars, quote from email)\n- classifier (\"gpt-5-mini-signal-classifier\")\n- proposedAction (required if risk/growth, else null)\n- proposedRationale (required if risk/growth, else null)\n\nNO explanations, ONLY JSON.`;\n\nconst userPrompt = `From: ${senderEmail}\nSubject: ${subject}\n\nBody:\n${body}\n\nClassify this. Return JSON only.`;\n\nreturn {\n  system: systemPrompt,\n  user: userPrompt,\n  maxTokens: 800,\n  messageId: messageId,\n  senderEmail: senderEmail,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [384, 208],
+      "id": "618dadf4-22a1-4192-963c-7965323b3b95",
+      "name": "Format Request"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "={{ $json.system }}"
+            },
+            {
+              "content": "={{ $json.user }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": "={{ $json.maxTokens }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [528, 208],
+      "id": "879ff804-1af9-4f88-a2b7-dc23b90a6955",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "REPLACE_WITH_YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let ai_output;\ntry {\n  const raw = $json.output?.[0]?.content?.[0]?.text || $json.message?.content || $json.text || $json.content || $json.output;\n  ai_output = typeof raw === \"string\" ? JSON.parse(raw) : raw;\n} catch (e) {\n  return { valid: false, errors: [\"Invalid JSON from AI\"], messageId: $('Format Request').item.json.messageId };\n}\n\nconst errors = [];\n\nif (![\"risk\", \"growth\", \"routine\"].includes(ai_output.signalType)) errors.push(\"signalType invalid\");\nif (![\"positive\", \"neutral\", \"negative\"].includes(ai_output.sentiment)) errors.push(\"sentiment invalid\");\nif (![\"low\", \"medium\", \"high\"].includes(ai_output.urgency)) errors.push(\"urgency invalid\");\n\nconst limits = { topic: 100, summary: 500, evidence: 300, classifier: 100, proposedAction: 700, proposedRationale: 500 };\nfor (const [field, max] of Object.entries(limits)) {\n  const val = (ai_output[field] || \"\").toString().trim();\n  if (val.length > max) errors.push(`${field} too long`);\n}\n\nif ([\"risk\", \"growth\"].includes(ai_output.signalType)) {\n  if (!ai_output.proposedAction || ai_output.proposedAction.trim().length === 0) errors.push(\"proposedAction required\");\n  if (!ai_output.proposedRationale || ai_output.proposedRationale.trim().length === 0) errors.push(\"proposedRationale required\");\n}\n\nconst messageId = $('Format Request').item.json.messageId;\nconst senderEmail = $('Format Request').item.json.senderEmail;\n\nif (errors.length > 0) return { valid: false, errors, messageId };\n\nreturn {\n  valid: true,\n  payload: ai_output,\n  messageId: messageId,\n  senderEmail: senderEmail\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [816, 208],
+      "id": "e5fb271e-66c5-41d3-9016-80dd4d3aa7be",
+      "name": "Validate Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2581b852-6566-4e98-89e3-2fc107e41921",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [976, 208],
+      "id": "bb3e5440-3160-4f54-a599-6d9f0a865e9e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cbzxrbrfwifxvbvljelh.supabase.co/functions/v1/customer-signal-ingress",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "=x-cs-signal-token",
+              "value": "REPLACE_WITH_YOUR_INGRESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const p = $json.payload;\n  const body = {\n    messageId: $json.messageId,\n    senderEmail: $json.senderEmail,\n    topic: p.topic,\n    signalType: p.signalType,\n    sentiment: p.sentiment,\n    urgency: p.urgency,\n    summary: p.summary,\n    evidence: p.evidence,\n    classifier: p.classifier,\n  };\n  if ([\"risk\",\"growth\"].includes(p.signalType)) {\n    body.proposedAction = p.proposedAction;\n    body.proposedRationale = p.proposedRationale;\n  }\n  return body;\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1248, 32],
+      "id": "6b2b9d2e-a6ac-4506-8ba8-ff9126a28d58",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json.body || $json;\nreturn {\n  status: \"success\",\n  signalId: response.signalId,\n  matchStatus: response.matchStatus,\n  accountId: response.accountId || null,\n  duplicate: response.duplicate === true\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1424, 32],
+      "id": "4c5a7305-9d7d-423b-9d78-00812ee6082d",
+      "name": "Handle Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  error: true,\n  errors: $json.errors || [],\n  messageId: $json.messageId || \"unknown\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 304],
+      "id": "cd26eebb-e9af-4fcc-b029-14e40633dc95",
+      "name": "Handle Validation Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [[{ "node": "Get a message", "type": "main", "index": 0 }]]
+    },
+    "Get a message": {
+      "main": [[{ "node": "Format Request", "type": "main", "index": 0 }]]
+    },
+    "Message a model": {
+      "main": [[{ "node": "Validate Response", "type": "main", "index": 0 }]]
+    },
+    "Format Request": {
+      "main": [[{ "node": "Message a model", "type": "main", "index": 0 }]]
+    },
+    "Validate Response": {
+      "main": [[{ "node": "If", "type": "main", "index": 0 }]]
+    },
+    "If": {
+      "main": [
+        [{ "node": "HTTP Request", "type": "main", "index": 0 }],
+        [{ "node": "Handle Validation Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP Request": {
+      "main": [[{ "node": "Handle Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
