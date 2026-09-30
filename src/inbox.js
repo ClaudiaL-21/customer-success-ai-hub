@@ -36,6 +36,22 @@ export async function loadInboxSignals(state, render) {
   render();
 }
 
+// PO manual test fix (2026-09-30) — customer_signals.processing_status is
+// never actually written by any code path yet (needs_review -> triaged ->
+// actioned -> archived is Case Lifecycle territory, not built until a later
+// package), so every signal sits at its DB default forever and filtering on
+// the raw column was a no-op that showed everything regardless of real
+// state. This derives a UI-only "needs review" concept instead — never
+// written back, never redefining or merging processing_status/review_status
+// in the database — from the two fields that already carry real meaning
+// today: account confirmation (Gate 1) and action review (Gate 2).
+function needsCsmReview(signal) {
+  const effectivelyConfirmed = Boolean(signal.accountConfirmed && signal.accountId);
+  if (!effectivelyConfirmed) return true; // Gate 1 still outstanding
+  if (signal.proposedAction && signal.reviewStatus === "pending") return true; // Gate 2 still outstanding
+  return false; // confirmed, and either no action was proposed or it's already reviewed (logged/sent/uncertain)
+}
+
 function getFilteredSignals(state) {
   const { scope, type, processingStatus } = state.inboxFilters;
   const myCsm = state.filters.csm !== "all" ? state.filters.csm : null;
@@ -47,7 +63,11 @@ function getFilteredSignals(state) {
     // silently falling back to "All".
     if (scope === "my" && (!myCsm || s.csmId !== myCsm)) return false;
     if (type !== "all" && s.type !== type) return false;
-    if (processingStatus !== "all" && s.processingStatus !== processingStatus) return false;
+    if (processingStatus === "needs_review") {
+      if (!needsCsmReview(s)) return false;
+    } else if (processingStatus !== "all" && s.processingStatus !== processingStatus) {
+      return false;
+    }
     return true;
   });
 }
