@@ -146,7 +146,16 @@ function renderInboxCard(signal, state, render) {
   const card = document.createElement("div");
   card.className = `nba-box inbox-card ${TYPE_CARD_CLASS[signal.type] || ""}`;
 
-  const confirmedBlock = signal.accountConfirmed
+  // Fix (PO manual test, 2026-09-30): account_confirmed alone is not enough —
+  // a handful of pre-existing rows have account_confirmed=true with no
+  // accountId at all (a side effect of Package 1's backfill, which set the
+  // flag on every existing row rather than only matched ones — harmless for
+  // Health/NBA since those never join to any account, but misleading here,
+  // where the flag itself now drives the UI). "Confirmed" is only ever shown
+  // when there is an actual account to show.
+  const effectivelyConfirmed = Boolean(signal.accountConfirmed && signal.accountId);
+
+  const confirmedBlock = effectivelyConfirmed
     ? `<p class="approval-confirm">✓ Confirmed: ${escapeHtml(signal.accountName || signal.accountId)}${healthEffectText(signal, state)}</p>`
     : "";
 
@@ -160,12 +169,12 @@ function renderInboxCard(signal, state, render) {
     <div class="inbox-gate2"></div>
   `;
 
-  if (!signal.accountConfirmed) {
+  if (!effectivelyConfirmed) {
     renderConfirmControl(card.querySelector(".inbox-confirm"), signal, state, render);
   }
 
   const gate2Container = card.querySelector(".inbox-gate2");
-  if (signal.accountConfirmed && signal.accountId && signal.proposedAction) {
+  if (effectivelyConfirmed && signal.proposedAction) {
     if (signal.reviewStatus === "pending") {
       renderApprovalControl(gate2Container, signal.accountId, {
         category: signal.type === "growth" ? "growth" : "risk_mitigation",
