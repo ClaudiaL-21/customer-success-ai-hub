@@ -1,0 +1,207 @@
+{
+  "name": "CS AI Hub Analyse",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bb5f6dff-641a-4ab5-8a67-d6c2b613f633",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -256,
+        144
+      ],
+      "id": "43b1db5f-3bdd-4e37-9cdd-680fd0b55741",
+      "name": "Webhook",
+      "webhookId": "bb5f6dff-641a-4ab5-8a67-d6c2b613f633",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZzO4crT7etcZ2u6U",
+          "name": "Header Auth account 27"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.user }}",
+        "options": {
+          "systemMessage": "={{ $json.body.system }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        16,
+        144
+      ],
+      "id": "d73a284d-e198-4e3f-a979-ecffb9514e46",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 6500,
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          },
+          "reasoningEffort": "low"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        304
+      ],
+      "id": "4d4f0a49-a567-4463-afa0-3321d1d83c1b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "EbcLt4gimccXQrV6",
+          "name": "OpenAI account 28"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { text: (typeof $json.output === 'string') ? $json.output : JSON.stringify($json.output) } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        432,
+        144
+      ],
+      "id": "209d9bbe-fff4-460b-8107-db8c34ece19a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CS AI Hub · Analyse\nOn-demand AI support for a CSM: the Hub sends a system prompt and the account data, the model returns an assessment (risk drivers, Next Best Action). **The AI only advises.** It sends and changes nothing; every action needs human approval first (see Approval workflow).\n\n**Colors:** yellow = intake · green = AI analysis · purple = response",
+        "height": 648,
+        "width": 1010,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -176
+      ],
+      "id": "88280864-6b71-4afa-a756-db8bad4e376c",
+      "name": "Note: Purpose"
+    },
+    {
+      "parameters": {
+        "content": "### 1 · Intake\nWebhook receives {system, user} from the Hub server. No customer data is stored here.",
+        "height": 420,
+        "width": 230
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "536a2f41-b08e-4b68-bf29-6d6150fd3699",
+      "name": "Note: 1 Intake"
+    },
+    {
+      "parameters": {
+        "content": "### 2 · AI analysis\nThe AI Agent runs the Hub's prompt on the OpenAI chat model (attached below). Output is returned as text only; the Hub validates it before showing it.",
+        "height": 422,
+        "width": 392,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "88da92bb-0c52-479d-b600-9dac38c70fd2",
+      "name": "Note: 2 AI analysis"
+    },
+    {
+      "parameters": {
+        "content": "### 3 · Respond\nReturns the model output to the Hub in the same request.",
+        "height": 404,
+        "width": 260,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        368,
+        0
+      ],
+      "id": "8ade9444-5814-44b9-9ed6-d45b14247681",
+      "name": "Note: 3 Respond"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "02869bb6-f809-47cd-b935-78687128fffc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c7c6732612f371ece85bad3980d0232c4c37b661169bdc3800c645e7b066ff77"
+  },
+  "nodeGroups": [],
+  "id": "3BH075IJBbQUFvl1",
+  "tags": []
+}
