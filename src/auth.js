@@ -15,6 +15,17 @@ export function getAuthToken() {
   return currentToken;
 }
 
+// A stored token that looks present but has expired server-side (no
+// refresh-token handling, by design) previously left the user stuck: the app
+// kept rendering as "logged in" while every Gate call failed with 401, with
+// no way back to the login form short of manually clearing storage. Callers
+// that get a 401 from a Bearer-protected endpoint call this to drop the
+// stale token so the next reload asks for a fresh sign-in.
+export function clearAuthToken() {
+  currentToken = null;
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* private mode etc. */ }
+}
+
 // Shows a minimal login form covering the page and resolves once a session
 // token exists (either restored from this tab's earlier sign-in, or after a
 // successful new sign-in). Called once, at startup, before the rest of the

@@ -18,6 +18,13 @@ const { default: handler } = await import("../api/confirm-signal-account.js");
 let accountConfirmed = false;
 let confirmedAccountId = null;
 let patchAttempts = 0;
+let lastPatchChanges = null;
+// hub_inbox_dataset() rows a test cares about, keyed by signalId — only the
+// fields confirm-signal-account.js's activation logic actually reads.
+// Defaults to none: existing tests below don't exercise activation at all,
+// so an unlisted signalId simply yields no match (activation stays null),
+// exactly like today's behavior before this field existed.
+let inboxSignals = [];
 
 // Simulated Supabase Auth users, keyed by the bearer token a test sends.
 const AUTH_USERS = {
@@ -34,9 +41,13 @@ global.fetch = async (url, init) => {
   if (String(url).endsWith("/rpc/hub_account_dataset")) {
     return Response.json(dataset);
   }
+  if (String(url).endsWith("/rpc/hub_inbox_dataset")) {
+    return Response.json(inboxSignals);
+  }
   if (String(url).includes("/customer_signals") && init?.method === "PATCH") {
     patchAttempts++;
     const changes = JSON.parse(init.body);
+    lastPatchChanges = changes;
     if (String(url).includes("account_confirmed=eq.false") && !accountConfirmed) {
       accountConfirmed = true;
       confirmedAccountId = changes.confirmed_account_id;
@@ -124,4 +135,62 @@ test("confirmation logic never reads match_status — works identically for unkn
   assert.equal(result.status, 200);
   assert.equal(result.body.status, "confirmed");
   assert.equal(patchAttempts, 1);
+});
+
+// Sprint 15C Final Integration Fix — a signal with no automatic account
+// match at ingestion never got its review pipeline started (health_delta
+// stuck at 0, review_status stuck at null) even though the AI already
+// produced a proposedAction. Confirming the account is what makes it known
+// for the first time, so that's when activation must happen — see
+// api/confirm-signal-account.js.
+test("activates Health/NBA on first confirmation for a high-urgency risk signal that had no account match at ingestion", async () => {
+  accountConfirmed = false; confirmedAccountId = null; patchAttempts = 0; lastPatchChanges = null;
+  const sid = "aaaa1111-1111-1111-1111-111111111111";
+  inboxSignals = [{ signalId: sid, type: "risk", urgency: "high", proposedAction: "Escalate to support lead", reviewStatus: null }];
+  const result = await call({ signalId: sid, accountId: account.accountId });
+  assert.equal(result.status, 200);
+  assert.equal(lastPatchChanges.review_status, "pending");
+  assert.equal(lastPatchChanges.health_delta, -10);
+});
+
+test("activates Health/NBA with the medium/low-urgency delta for a matched-after-confirmation risk signal", async () => {
+  accountConfirmed = false; confirmedAccountId = null; patchAttempts = 0; lastPatchChanges = null;
+  const sid = "aaaa2222-2222-2222-2222-222222222222";
+  inboxSignals = [{ signalId: sid, type: "risk", urgency: "medium", proposedAction: "Schedule a check-in call", reviewStatus: null }];
+  const result = await call({ signalId: sid, accountId: account.accountId });
+  assert.equal(result.status, 200);
+  assert.equal(lastPatchChanges.review_status, "pending");
+  assert.equal(lastPatchChanges.health_delta, -5);
+});
+
+test("activates review (health_delta 0) for a growth signal that had no account match at ingestion", async () => {
+  accountConfirmed = false; confirmedAccountId = null; patchAttempts = 0; lastPatchChanges = null;
+  const sid = "aaaa3333-3333-3333-3333-333333333333";
+  inboxSignals = [{ signalId: sid, type: "growth", urgency: "low", proposedAction: "Offer the Advanced tier", reviewStatus: null }];
+  const result = await call({ signalId: sid, accountId: account.accountId });
+  assert.equal(result.status, 200);
+  assert.equal(lastPatchChanges.review_status, "pending");
+  assert.equal(lastPatchChanges.health_delta, 0);
+});
+
+test("never activates a routine signal (no proposedAction to review)", async () => {
+  accountConfirmed = false; confirmedAccountId = null; patchAttempts = 0; lastPatchChanges = null;
+  const sid = "aaaa4444-4444-4444-4444-444444444444";
+  inboxSignals = [{ signalId: sid, type: "routine", urgency: "low", proposedAction: null, reviewStatus: null }];
+  const result = await call({ signalId: sid, accountId: account.accountId });
+  assert.equal(result.status, 200);
+  assert.equal("review_status" in lastPatchChanges, false);
+  assert.equal("health_delta" in lastPatchChanges, false);
+});
+
+test("never re-activates a signal whose review pipeline already started at ingestion (automatic match)", async () => {
+  accountConfirmed = false; confirmedAccountId = null; patchAttempts = 0; lastPatchChanges = null;
+  const sid = "aaaa5555-5555-5555-5555-555555555555";
+  // Already matched at ingestion: review_status is already "pending", not
+  // null — the exact signal confirm-signal-account.js must leave alone.
+  inboxSignals = [{ signalId: sid, type: "risk", urgency: "high", proposedAction: "Escalate to support lead", reviewStatus: "pending" }];
+  const result = await call({ signalId: sid, accountId: account.accountId });
+  assert.equal(result.status, 200);
+  assert.equal("review_status" in lastPatchChanges, false);
+  assert.equal("health_delta" in lastPatchChanges, false);
 });

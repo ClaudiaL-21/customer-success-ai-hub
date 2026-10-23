@@ -9,6 +9,7 @@ const payload = {
   signalType: "risk", sentiment: "negative", urgency: "high", summary: "Customer reports an outage.",
   evidence: "We cannot complete orders.", classifier: "demo-model-v1",
   proposedAction: "CSM should review the outage and coordinate a response.", proposedRationale: "The customer reports blocked orders.",
+  proposedResponse: "Hi, thanks for flagging this — we're investigating the outage now and will follow up shortly.",
 };
 const request = (body, supplied = token) => new Request("https://example.supabase.co/functions/v1/customer-signal-ingress", {
   method: "POST", headers: { "content-type": "application/json", "x-cs-signal-token": supplied }, body: JSON.stringify(body),
@@ -24,7 +25,15 @@ test("normalizes a sender without letting AI choose an account", () => {
 test("rejects invalid categories, missing proposed actions, and raw email bodies", () => {
   assert.equal(validateSignalPayload({ ...payload, signalType: "critical" }), null);
   assert.equal(validateSignalPayload({ ...payload, proposedAction: "" }), null);
+  assert.equal(validateSignalPayload({ ...payload, proposedResponse: "" }), null);
   assert.equal(validateSignalPayload({ ...payload, body: "raw mail" }), null);
+});
+
+test("proposedResponse follows the same rule as proposedAction/proposedRationale: required for risk/growth, forbidden for routine", () => {
+  const routine = { ...payload, signalType: "routine", proposedAction: undefined, proposedRationale: undefined, proposedResponse: undefined };
+  delete routine.proposedAction; delete routine.proposedRationale; delete routine.proposedResponse;
+  assert.ok(validateSignalPayload(routine));
+  assert.equal(validateSignalPayload({ ...routine, proposedResponse: "unexpected" }), null);
 });
 
 test("unauthorized ingress never calls the database", async () => {

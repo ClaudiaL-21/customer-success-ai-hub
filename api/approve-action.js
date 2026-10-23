@@ -20,7 +20,7 @@ import { requireDemoAdmin } from "./_auth.js";
 import { loadAccountDataset } from "./_accounts.js";
 import { computeHealthScore } from "../src/scoring.js";
 import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_APPROVAL_TIMEOUT_MS } from "./_n8n.js";
-import { claimSignalReview, finishSignalReview } from "./_signal-store.js";
+import { claimSignalReview, finishSignalReview, getSignalForApproval } from "./_signal-store.js";
 
 const N8N_APPROVAL_WEBHOOK_URL = process.env.N8N_APPROVAL_WEBHOOK_URL;
 // Must be exactly the string "true" — missing, empty, "false", or any other
@@ -97,6 +97,31 @@ export default async function handler(req, res) {
   const csm = data.csms.find(c => c.csmId === account.csmId);
   const reviewedAt = new Date().toISOString();
 
+  // Sprint 15C Final Showcase Flow — a signal-based review carries a
+  // pre-drafted customer reply forward to n8n so the Approval workflow can
+  // create a Gmail draft addressed to the original sender, instead of (or
+  // alongside) its existing internal notification. Only ever looked up for
+  // a signal review: the legacy on-demand NBA path has no originating email
+  // to reply to. senderEmail/proposedResponse never reach the browser —
+  // this is the only place they're read, and they go straight into the
+  // outbound n8n payload below, never back in this endpoint's own response.
+  let draft = null;
+  if (isSignalReview) {
+    try {
+      const forApproval = await getSignalForApproval(signalId);
+      if (forApproval?.senderEmail && forApproval?.proposedResponse) {
+        // The Gmail draft has no recipient prefilled (the n8n Gmail node's
+        // Draft/Create operation has no To field at all, confirmed against
+        // the actual node — not a config gap) — so the sender address and a
+        // quoted excerpt of the original message go into the body itself,
+        // both so the CSM can copy the address in and so the reply reads
+        // with its original context, not just the AI's draft text alone.
+        const body = `${forApproval.proposedResponse}\n\n---\nReply to: ${forApproval.senderEmail}\n(recipient not prefilled — add it before sending)\n\nOriginal message:\n"${forApproval.evidence}"`;
+        draft = { senderEmail: forApproval.senderEmail, subject: `Re: ${forApproval.topic}`, body };
+      }
+    } catch { return res.status(503).json({ error: "Account data is currently unavailable. Please try again." }); }
+  }
+
   const payload = {
     accountId: account.accountId,
     accountName: account.accountName,
@@ -110,6 +135,11 @@ export default async function handler(req, res) {
     // csmName (the account's fachlich-zustaendiger CSM) in every audit trail,
     // including the legacy on-demand NBA path, not just signal-based reviews.
     reviewedByUserId: user.id,
+    // Draft target for the Approval workflow's Gmail "Create Draft" step —
+    // never auto-sent from here or from n8n; a human still sends it from
+    // Gmail. Absent (undefined, not serialized) when there's no proposed
+    // response to draft from, e.g. the legacy on-demand NBA path.
+    ...(draft ? { customerDraft: draft } : {}),
   };
 
   // Legacy on-demand NBA approvals and signal-based reviews share this same

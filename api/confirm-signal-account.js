@@ -13,7 +13,7 @@
 
 import { applyGate } from "./_security.js";
 import { requireDemoAdmin } from "./_auth.js";
-import { loadAccountDataset } from "./_accounts.js";
+import { loadAccountDataset, loadInboxDataset } from "./_accounts.js";
 import { confirmSignalAccount } from "./_signal-store.js";
 
 const SIGNAL_ID_PATTERN = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
@@ -42,11 +42,34 @@ export default async function handler(req, res) {
   const account = data.accounts.find(a => a.accountId === accountId.trim());
   if (!account) return res.status(404).json({ error: "Unknown accountId" });
 
+  // Health/NBA activation: an unmatched-at-ingestion signal (sender unknown
+  // or ambiguous) never got its review pipeline started — hub_ingest_
+  // customer_signal() only sets health_delta/review_status when there's
+  // already an automatic account match. Confirming the account here is what
+  // makes it "known" for the first time, so this is where that pipeline
+  // finally starts for those signals. A matched signal already has
+  // review_status set (pending, for risk/growth) from ingestion, so this
+  // never re-applies to it. Same deterministic rule as ingestion's own
+  // (kind === 'risk' -> urgency-based delta, else 0) — not a new health
+  // model, just applied at the point the account becomes known instead of
+  // silently skipped.
+  let activation = null;
+  try {
+    const inboxSignals = await loadInboxDataset();
+    const signal = inboxSignals.find(s => s.signalId === signalId);
+    if (signal && signal.reviewStatus === null && signal.proposedAction) {
+      activation = {
+        reviewStatus: "pending",
+        healthDelta: signal.type === "risk" ? (signal.urgency === "high" ? -10 : -5) : 0,
+      };
+    }
+  } catch { return res.status(503).json({ error: "Account data is currently unavailable. Please try again." }); }
+
   const confirmedAt = new Date().toISOString();
 
   let confirmed;
   try {
-    confirmed = await confirmSignalAccount(signalId, account.accountId, account.csmId, confirmedAt, user.id);
+    confirmed = await confirmSignalAccount(signalId, account.accountId, account.csmId, confirmedAt, user.id, activation);
   } catch {
     return res.status(503).json({ error: "Confirmation could not be saved. Please try again." });
   }

@@ -1,18 +1,23 @@
 // n8n only receives this function's dedicated token, never a Supabase key.
 // All payload fields are untrusted, including the classifier's output.
-const FIELDS = ["messageId", "senderEmail", "topic", "signalType", "sentiment", "urgency", "summary", "evidence", "classifier", "proposedAction", "proposedRationale"];
+const FIELDS = ["messageId", "senderEmail", "topic", "signalType", "sentiment", "urgency", "summary", "evidence", "classifier", "proposedAction", "proposedRationale", "proposedResponse"];
 const CHOICES = {
   signalType: ["risk", "growth", "routine"],
   sentiment: ["positive", "neutral", "negative"],
   urgency: ["low", "medium", "high"],
 };
-const LIMITS = { topic: 100, summary: 500, evidence: 300, classifier: 100, proposedAction: 700, proposedRationale: 500 };
+const LIMITS = { topic: 100, summary: 500, evidence: 300, classifier: 100, proposedAction: 700, proposedRationale: 500, proposedResponse: 1500 };
+// proposedResponse is required alongside proposedAction/proposedRationale for
+// a risk/growth signal — same "AI prepares, human decides" treatment: a
+// pre-drafted customer reply that stays unused until a CSM approves in Gate
+// 2 and it becomes a Gmail draft, never sent on its own.
+const CONDITIONAL_FIELDS = ["proposedAction", "proposedRationale", "proposedResponse"];
 
 export function validateSignalPayload(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw) || Object.keys(raw).some(k => !FIELDS.includes(k))) return null;
   const payload = {};
   for (const field of FIELDS) {
-    if (field === "proposedAction" || field === "proposedRationale") continue;
+    if (CONDITIONAL_FIELDS.includes(field)) continue;
     if (typeof raw[field] !== "string") return null;
     payload[field] = raw[field].trim();
   }
@@ -24,12 +29,12 @@ export function validateSignalPayload(raw) {
   if (Object.entries(CHOICES).some(([field, allowed]) => !allowed.includes(payload[field]))) return null;
   if (Object.entries(LIMITS).some(([field, max]) => field in payload && (!payload[field] || payload[field].length > max))) return null;
   if (["risk", "growth"].includes(payload.signalType)) {
-    for (const field of ["proposedAction", "proposedRationale"]) {
+    for (const field of CONDITIONAL_FIELDS) {
       if (typeof raw[field] !== "string") return null;
       payload[field] = raw[field].trim();
       if (!payload[field] || payload[field].length > LIMITS[field]) return null;
     }
-  } else if (raw.proposedAction !== undefined || raw.proposedRationale !== undefined) {
+  } else if (CONDITIONAL_FIELDS.some(field => raw[field] !== undefined)) {
     return null;
   }
   return payload;

@@ -1,16 +1,20 @@
+import { requireDemoAdmin } from "./_auth.js";
 import { loadInboxDataset } from "./_accounts.js";
 
-// Same shape/security posture as api/accounts.js: read-only, GET, no auth
-// gate of its own (this data carries no sender email or other raw contact
-// data — hub_inbox_dataset() never returns it, see Package 2 — and the
-// whole app already sits behind the Sprint 16 login gate in index.html).
-// The service-role key never leaves _accounts.js; nothing here forwards it.
+// Sprint 15C — now carries the same requireDemoAdmin identity check as Gate
+// 1/2 (api/_auth.js) instead of being open like api/accounts.js: this data
+// exists specifically to support a later step (surfacing sender_email for
+// unknown/ambiguous signals) that needs the endpoint itself to refuse an
+// unauthenticated caller, not just the SPA's own login screen. The
+// service-role key still never leaves _accounts.js; nothing here forwards it.
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ error: "Method not allowed" });
   }
+  const user = await requireDemoAdmin(req, res);
+  if (!user) return;
   try {
     const signals = await loadInboxDataset();
     return res.status(200).json({ signals });

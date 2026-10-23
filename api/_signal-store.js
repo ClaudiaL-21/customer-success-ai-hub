@@ -11,6 +11,33 @@ function connection() {
   return { url, headers };
 }
 
+// Sprint 15C Final Showcase Flow — Gate 2's Gmail-draft step needs the
+// original sender_email/topic/proposed_response for exactly one signal, at
+// the moment of approval. This is server-side only: unlike
+// hub_inbox_dataset()/hub_account_dataset() (both already exposed to the
+// browser via /api/inbox and /api/accounts), sender_email is deliberately
+// never put in either of those — a dedicated, narrow read here keeps it out
+// of any client-facing response entirely, rather than reopening that
+// decision for two endpoints that don't need it.
+export async function getSignalForApproval(signalId) {
+  const { url, headers } = connection();
+  const endpoint = new URL("/rest/v1/customer_signals", url);
+  endpoint.searchParams.set("signal_id", `eq.${signalId}`);
+  endpoint.searchParams.set("select", "sender_email,topic,proposed_response,evidence");
+  try {
+    const response = await fetch(endpoint, { headers, redirect: "error", signal: AbortSignal.timeout(8000) });
+    if (!response.ok) throw new AccountDataError();
+    const rows = await response.json();
+    if (!Array.isArray(rows) || rows.length !== 1) return null;
+    return {
+      senderEmail: rows[0].sender_email, topic: rows[0].topic,
+      proposedResponse: rows[0].proposed_response, evidence: rows[0].evidence,
+    };
+  } catch {
+    throw new AccountDataError();
+  }
+}
+
 async function patchSignal(signalId, expectedStatus, changes) {
   const { url, headers } = connection();
   const endpoint = new URL("/rest/v1/customer_signals", url);
@@ -81,10 +108,16 @@ async function patchSignalWhereUnconfirmed(signalId, changes) {
 // for action review, applied here to account confirmation instead. Works
 // identically for matched/unknown/ambiguous signals; match_status is never
 // consulted here, only account_confirmed.
-export function confirmSignalAccount(signalId, accountId, confirmedByCsmId, confirmedAt, confirmedByUserId = null) {
+// activation (optional) — { reviewStatus, healthDelta } — carries the
+// Health/NBA pipeline's first-time activation for a signal that was never
+// matched at ingestion, applied in the very same atomic, conditional update
+// as the confirmation itself. See api/confirm-signal-account.js for when
+// this is computed and why it never touches an already-matched signal.
+export function confirmSignalAccount(signalId, accountId, confirmedByCsmId, confirmedAt, confirmedByUserId = null, activation = null) {
   return patchSignalWhereUnconfirmed(signalId, {
     confirmed_account_id: accountId, account_confirmed: true,
     confirmed_by_csm_id: confirmedByCsmId, confirmed_at: confirmedAt,
     confirmed_by_user_id: confirmedByUserId,
+    ...(activation ? { review_status: activation.reviewStatus, health_delta: activation.healthDelta } : {}),
   });
 }

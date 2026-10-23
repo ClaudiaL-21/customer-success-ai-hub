@@ -18,6 +18,22 @@ function escapeHtml(str) {
 }
 const fmtDateTime = iso => new Date(iso).toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 
+// Evidence is a direct quote the AI pulled from the email; for a short email
+// it's often word-for-word (or near enough) the same as the AI's own
+// summary. Showing both then is pure visual duplication, not two distinct
+// pieces of information — so Evidence is only rendered when it actually adds
+// something. Deliberately simple (exact match after normalizing whitespace/
+// case/punctuation, or one fully containing the other) — no fuzzy-matching
+// library, this only needs to catch the common "AI paraphrased its own
+// quote back to itself" case, not general near-duplicate detection.
+const normalizeForCompare = s => s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g, " ").trim();
+function isNearDuplicate(summary, evidence) {
+  const a = normalizeForCompare(summary || "");
+  const b = normalizeForCompare(evidence || "");
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
 const TYPE_LABEL = { risk: "Risk", growth: "Growth", routine: "Routine" };
 // Reuses the existing nba-box variants (renderCustomerSignals already uses
 // nba-box-risk the same way) instead of inventing new card colors.
@@ -179,11 +195,17 @@ function renderInboxCard(signal, state, render) {
     ? `<p class="approval-confirm">✓ Confirmed: ${escapeHtml(signal.accountName || signal.accountId)}${healthEffectText(signal, state)}</p>`
     : "";
 
+  const showEvidence = signal.evidence && !isNearDuplicate(signal.summary, signal.evidence);
+
   card.innerHTML = `
-    <p class="nba-label">${escapeHtml(TYPE_LABEL[signal.type] || signal.type)} · ${escapeHtml(signal.topic)} · ${escapeHtml(signal.urgency)} urgency</p>
-    <p>${escapeHtml(signal.summary)}</p>
-    <p class="sub">Sentiment: ${escapeHtml(signal.sentiment)} · Evidence: ${escapeHtml(signal.evidence)}</p>
-    <p class="sub">Category: ${signal.inboundCategory ? escapeHtml(signal.inboundCategory) : "not yet classified"} · Processing: ${escapeHtml(PROCESSING_STATUS_LABEL[signal.processingStatus] || signal.processingStatus)} · Received ${fmtDateTime(signal.createdAt)}</p>
+    <div class="inbox-card-head">
+      <p class="nba-label">${escapeHtml(TYPE_LABEL[signal.type] || signal.type)} · ${escapeHtml(signal.topic)} · ${escapeHtml(signal.urgency)} urgency</p>
+      <p class="inbox-received">${fmtDateTime(signal.createdAt)}</p>
+    </div>
+    <p class="inbox-summary">${escapeHtml(signal.summary)}</p>
+    ${showEvidence ? `<blockquote class="inbox-evidence">${escapeHtml(signal.evidence)}</blockquote>` : ""}
+    <p class="sub">Sentiment: ${escapeHtml(signal.sentiment)}</p>
+    <p class="sub">Category: ${signal.inboundCategory ? escapeHtml(signal.inboundCategory) : "not yet classified"} · Processing: ${escapeHtml(PROCESSING_STATUS_LABEL[signal.processingStatus] || signal.processingStatus)}</p>
     ${confirmedBlock}
     <div class="inbox-confirm"></div>
     <div class="inbox-gate2"></div>

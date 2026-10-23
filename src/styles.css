@@ -1387,6 +1387,14 @@ footer { text-align: center; color: var(--muted); font-size: 11px; padding: 20px
 .inbox-filters select { padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; }
 .inbox-list { display: flex; flex-direction: column; gap: var(--space-3); }
 .inbox-card { margin-top: 0; }
+.inbox-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+.inbox-card-head .nba-label { margin-bottom: 0; }
+.inbox-received { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; margin: 0; }
+.inbox-summary { margin: 6px 0 3px; }
+.inbox-evidence {
+  margin: 0 0 6px; padding: 4px 10px; border-left: 2px solid var(--border);
+  color: var(--muted); font-size: 12px; font-style: italic;
+}
 .inbox-account-select { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 12px; color: var(--muted); font-weight: 600; }
 .inbox-account-select select { padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; }
 .inbox-confirm-btn { margin-top: 4px; }

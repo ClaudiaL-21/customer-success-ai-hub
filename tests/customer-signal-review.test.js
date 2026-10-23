@@ -30,6 +30,13 @@ global.fetch = async (url, init) => {
     return Response.json({ ...dataset, accounts: dataset.accounts.map(a => a.accountId === account.accountId
       ? { ...a, customerSignals: [{ ...signal, reviewStatus }] } : a) });
   }
+  if (String(url).includes("/customer_signals") && (!init.method || init.method === "GET")) {
+    // Sprint 15C Final Showcase Flow — getSignalForApproval's lookup. No
+    // proposed_response here on purpose: this file's signal never got one,
+    // so customerDraft-specific behavior is covered separately in
+    // tests/customer-signal-draft.test.js, not duplicated here.
+    return Response.json([{ sender_email: "customer@example.test", topic: "Outage", proposed_response: null }]);
+  }
   if (String(url).includes("/customer_signals") && init.method === "PATCH") {
     const changes = JSON.parse(init.body);
     if (String(url).includes("review_status=eq.pending") && reviewStatus === "pending") {

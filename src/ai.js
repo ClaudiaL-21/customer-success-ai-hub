@@ -1,4 +1,17 @@
-import { getAuthToken } from "./auth.js";
+import { getAuthToken, clearAuthToken } from "./auth.js";
+
+// A 401 from a Bearer-protected endpoint means the stored token is missing
+// or has expired server-side — never a client-side problem to retry as-is.
+// Drop it so the next reload shows the login form again, and say so plainly
+// instead of surfacing the generic "Authentication required." dead end.
+async function readAuthGatedError(res) {
+  const err = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    clearAuthToken();
+    return new Error("Your session has expired. Please reload the page and sign in again.");
+  }
+  return new Error(err.error || `Request failed (${res.status})`);
+}
 
 async function callAnalyze(body) {
   const res = await fetch("/api/analyze", {
@@ -69,20 +82,16 @@ export async function approveAction(accountId, nba, signalId = null) {
     headers,
     body: JSON.stringify({ accountId, action: nba.action, category: nba.category, rationale: nba.rationale, ...(signalId ? { signalId } : {}) }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Request failed (${res.status})`);
-  }
+  if (!res.ok) throw await readAuthGatedError(res);
   return res.json();
 }
 
-// Sprint 16 — Customer Intelligence Inbox, Package 6.
+// Sprint 16 — Customer Intelligence Inbox, Package 6. api/inbox.js now
+// requires the same verified session as Gate 1/2 (see its own comment), so
+// this sends the same Bearer token those calls do.
 export async function fetchInboxSignals() {
-  const res = await fetch("/api/inbox", { cache: "no-store" });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Request failed (${res.status})`);
-  }
+  const res = await fetch("/api/inbox", { cache: "no-store", headers: { authorization: `Bearer ${getAuthToken() || ""}` } });
+  if (!res.ok) throw await readAuthGatedError(res);
   const { signals } = await res.json();
   return signals;
 }
@@ -95,9 +104,6 @@ export async function confirmSignalAccount(signalId, accountId) {
     headers: { "content-type": "application/json", authorization: `Bearer ${getAuthToken() || ""}` },
     body: JSON.stringify({ signalId, accountId }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Request failed (${res.status})`);
-  }
+  if (!res.ok) throw await readAuthGatedError(res);
   return res.json();
 }
