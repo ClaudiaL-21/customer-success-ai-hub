@@ -68,11 +68,9 @@ All 230 existing automated tests continue to pass (`npm test`). No new automated
 - `supabase/migrations/20260930090000_update_source_mailbox_to_test_account.sql` (new)
 - `n8n/email-signal-ingestion.workflow.json` (new — cleaned workflow export)
 - `docs/15C_email_ingestion_payload_schema.md` (new)
-- `docs/15C_workflow_c_structure.md` (new)
-- `docs/15C_workflow_c_import_guide.md` (new)
-- `docs/15C_workflow_c_build_steps.md` (new)
-- `docs/15C_setup_handoff.md` (new)
 - `docs/15C_final_status.md` (this file, new)
+
+The build and import guides written before the workflow existed (`15C_workflow_c_structure`, `15C_workflow_c_import_guide`, `15C_workflow_c_build_steps`, `15C_setup_handoff`) were removed once the workflow was built and exported. The exported workflows in `n8n/` and `docs/06_n8n_integration.md` are the current reference; the removed files remain in the Git history.
 - `supabase/seeds/20260929_account_contacts_demo.sql` (updated: test sender mapping corrected to a real, reachable address)
 
 ## Open follow-ups (not blocking)

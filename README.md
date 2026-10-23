@@ -48,8 +48,15 @@ customer-success-ai-hub/
 npm run dev:local
 ```
 
-Starts a dependency-free local server (frontend + AI serverless function) on port 5180 (see `.claude/launch.json` if you're using the Claude Code preview tooling). Set `MOCK_AI=true` in a local `.env` to exercise the full AI layer without a real Anthropic API key or any cost.
+Starts a dependency-free local server (frontend + serverless functions) on http://localhost:5173 (override with the `PORT` environment variable). Set `MOCK_AI=true` in a local `.env` to exercise the AI layer without a real model key or any cost. Run the tests with `npm test`.
 
-## Next step
+## Current state
 
-The gaps identified in [docs/05_project_brief.md](docs/05_project_brief.md) — Health Score history, a single well-reasoned Next Best Action, and the n8n human-approval workflow — are the current build priorities.
+The human-approval workflow and a live email intake are built and tested end to end. A customer email becomes an unconfirmed signal; an AI prepares a classification, a next action and a draft reply; a person confirms the account (Gate 1) and approves the action (Gate 2); only then does n8n act.
+
+- **n8n workflows** (exported JSON, documented with sticky notes): [n8n/](n8n/), with email intake, AI analysis and the approval workflow described in [docs/06_n8n_integration.md](docs/06_n8n_integration.md) and [docs/15C_email_ingestion_payload_schema.md](docs/15C_email_ingestion_payload_schema.md)
+- **Project summary with screenshots and links:** [docs/n8n_application_brief.md](docs/n8n_application_brief.md)
+- **Case study:** https://claude.ai/artifact/JwwsD8FEvDf5WxVBdpXJmg
+- **Clickable prototypes:** [Hub](https://claude.ai/artifact/UHd4SESuoxqyHK8YM7ZDtb) and [QBR](https://claude.ai/artifact/FkAoRy42trDBE2P6rb7ViY)
+
+Still planned: a Slack alert when a signal pushes an account over a threshold, a weekly voice-of-customer digest for product, and an error workflow that alerts the owner.
