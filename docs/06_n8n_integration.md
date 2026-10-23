@@ -54,6 +54,22 @@ When a CSM reviews and confirms an AI-suggested Next Best Action (Sprint 02's Hu
 
 If `N8N_APPROVAL_WEBHOOK_URL` isn't set, approvals are still tracked in the UI ("✓ Reviewed by CSM and logged, no workflow connected yet") and logged server-side, so the flow is demoable without n8n. If the URL **is** set but `N8N_WEBHOOK_SECRET` is missing, that's treated as a misconfiguration (not the "no workflow wired up" case above) and the app returns a config error instead of calling an unauthenticated webhook.
 
+**Sprint 15C Final Showcase Flow — `customerDraft` field:** for a signal-based review only (never the legacy on-demand NBA path), the payload above now also carries:
+```json
+{
+  "customerDraft": {
+    "senderEmail": "customer@example.com",
+    "subject": "Re: Login-Ausfall / Zugriff nicht möglich",
+    "body": "Hi, thanks for flagging this — we're investigating now and will follow up shortly."
+  }
+}
+```
+Present only when the originating signal has a stored `proposed_response` (risk/growth signals; see `docs/15C_email_ingestion_payload_schema.md`) — absent for the legacy on-demand NBA path and for any signal without one.
+
+**Required manual step (not done by this repo's code — no n8n API access from here):** the Approval workflow's own Gmail node needs to be switched from **Send Email** to **Create Draft**, with To = `{{$json.customerDraft.senderEmail}}`, Subject = `{{$json.customerDraft.subject}}`, Body = `{{$json.customerDraft.body}}`. This keeps the existing internal notification/Sheet-logging step as-is (still fires on every approval) but adds the customer-facing draft as the flow's actual deliverable — the CSM reviews/edits/sends it from Gmail themselves; nothing here or in n8n sends it automatically.
+
+**Anti-loop guard:** the same Gmail mailbox this workflow's internal notification lands in is also the one the Email Signal Ingestion workflow (`n8n/email-signal-ingestion.workflow.json`) monitors. That workflow now has a deterministic "Skip Internal Mail" IF node, right after fetching the message and before any AI classification, that stops the run for any Subject starting with `[Action approved]` (the notification's fixed, non-AI-generated prefix) — so the internal notification is never re-ingested as a new customer signal. This relies on that prefix staying fixed; changing it requires updating the guard's condition to match.
+
 ## Exported workflow files
 
 Raw n8n workflow exports (as JSON) contain webhook path segments, credential references, Sheet IDs/URLs, and similar identifying details. **Do not commit a raw export into this repository.** If you want to check one in for reference, strip the `webhookId`/`path`/`id`/`credentials` fields and any Google Sheets document IDs/URLs and personal email addresses first.

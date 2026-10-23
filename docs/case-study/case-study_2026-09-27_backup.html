@@ -1,0 +1,385 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Customer Success AI Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #F5F8F8;
+  --surface: #FFFFFF;
+  --surface-2: #EAF3F1;
+  --ink: #16262E;
+  --muted: #5A6A72;
+  --line: #D5E0E0;
+  --navy: #0E2A3B;
+  --navy-ink: #E8F1F2;
+  --accent: #0E8A7E;
+  --accent-soft: #D7EFEB;
+  --risk: #B83A33;
+  --risk-soft: #F8E4E2;
+  --rec: #6547C2;
+  --rec-soft: #ECE6FA;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0A1A21;
+    --surface: #10252F;
+    --surface-2: #143039;
+    --ink: #E2ECEE;
+    --muted: #93A6AD;
+    --line: #23414B;
+    --navy: #07161D;
+    --navy-ink: #E2ECEE;
+    --accent: #3CC7B6;
+    --accent-soft: #14393B;
+    --risk: #EE8177;
+    --risk-soft: #3A2224;
+    --rec: #A992F2;
+    --rec-soft: #2A2442;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0A1A21;
+  --surface: #10252F;
+  --surface-2: #143039;
+  --ink: #E2ECEE;
+  --muted: #93A6AD;
+  --line: #23414B;
+  --navy: #07161D;
+  --navy-ink: #E2ECEE;
+  --accent: #3CC7B6;
+  --accent-soft: #14393B;
+  --risk: #EE8177;
+  --risk-soft: #3A2224;
+  --rec: #A992F2;
+  --rec-soft: #2A2442;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.6;
+  padding-inline: 20px;
+}
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, video:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(1.55rem, 1.2rem + 1.4vw, 2.1rem); letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+
+.page { max-width: 1080px; margin: 0 auto; padding-block: 56px 72px; display: grid; gap: 72px; }
+.col { max-width: 700px; display: grid; gap: 18px; }
+.eyebrow {
+  font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); font-weight: 500;
+}
+.lede { font-size: 1.12rem; color: var(--muted); }
+
+/* Header */
+.hero {
+  background: var(--navy); color: var(--navy-ink);
+  margin-inline: -20px; padding: 56px 20px 48px;
+}
+.hero-inner { max-width: 1080px; margin: 0 auto; display: grid; gap: 22px; }
+.hero .eyebrow { color: #5EDBCB; }
+.hero h1 { font-size: clamp(2.3rem, 1.6rem + 3.4vw, 4rem); letter-spacing: -0.02em; max-width: 14ch; }
+.hero .thesis { font-size: clamp(1.1rem, 1rem + 0.5vw, 1.3rem); max-width: 40ch; color: #C9DDE0; }
+.facts { display: flex; flex-wrap: wrap; gap: 10px 28px; font-family: var(--mono); font-size: 0.82rem; color: #A9C2C7; }
+.facts span strong { color: #FFFFFF; font-weight: 500; }
+.byline { font-size: 0.95rem; color: #A9C2C7; }
+
+/* Mapping table */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.95rem; }
+th, td { text-align: left; vertical-align: top; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: none; }
+th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--surface-2); }
+td:first-child { font-weight: 600; width: 30%; }
+td:last-child { color: var(--muted); width: 22%; font-size: 0.88rem; }
+
+/* Flow diagram */
+.lanes { display: grid; gap: 20px; }
+.lane { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 20px; display: grid; gap: 16px; }
+.lane-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.lane-head h3 { font-size: 1.05rem; }
+.lane-head p { color: var(--muted); font-size: 0.92rem; }
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.step {
+  flex: 1 1 150px; border-radius: 8px; padding: 10px 12px; border: 1px solid var(--line);
+  background: var(--bg); display: grid; gap: 2px; align-content: start;
+}
+.step .who { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.step .what { font-weight: 600; font-size: 0.93rem; line-height: 1.3; }
+.step.n8n { background: var(--accent-soft); border-color: transparent; }
+.step.n8n .who { color: var(--accent); }
+.arrow { align-self: center; color: var(--muted); font-family: var(--mono); font-size: 0.9rem; }
+@media (max-width: 720px) {
+  .flow { flex-direction: column; }
+  .arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 14px; }
+}
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 20px; display: grid; gap: 10px; align-content: start; }
+.card ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 0.95rem; }
+pre.contract {
+  margin: 0; padding: 14px 16px; border-radius: 8px; background: var(--navy); color: #CFE3E6;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.55; overflow-x: auto;
+}
+
+/* Principles */
+.principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.principle { padding: 20px 20px 22px 0; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+.principle h3 { font-size: 1.05rem; }
+.principle p { color: var(--muted); font-size: 0.95rem; }
+.tag { display: inline-block; font-family: var(--mono); font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+.tag.risk { background: var(--risk-soft); color: var(--risk); }
+.tag.rec { background: var(--rec-soft); color: var(--rec); }
+.tag.ok { background: var(--accent-soft); color: var(--accent); }
+
+/* Health score chart */
+.weights { display: grid; gap: 8px; }
+.w-row { display: grid; grid-template-columns: minmax(150px, 210px) 1fr 3.2em; align-items: center; gap: 12px; font-size: 0.92rem; }
+.w-track { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.w-bar { height: 100%; background: var(--accent); border-radius: 6px; }
+.w-val { font-family: var(--mono); font-size: 0.85rem; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .w-row { grid-template-columns: 1fr 3.2em; } .w-track { grid-column: 1 / -1; order: 3; } }
+
+/* Media */
+figure { margin: 0; display: grid; gap: 8px; }
+figure img, figure video { width: 100%; max-width: 100%; height: auto; display: block; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+figcaption { font-size: 0.86rem; color: var(--muted); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px 24px; }
+.videos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+
+.incident { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+.timeline { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.timeline li { display: grid; grid-template-columns: 8.5em 1fr; gap: 12px; font-size: 0.95rem; }
+.timeline .t { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); padding-top: 3px; }
+
+.next { border-left: 3px solid var(--rec); padding-left: 18px; }
+
+footer { border-top: 1px solid var(--line); padding-top: 24px; display: grid; gap: 8px; color: var(--muted); font-size: 0.92rem; }
+</style>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Case study · Customer Success × Automation</p>
+    <h1>Customer Success AI Hub</h1>
+    <p class="thesis">A CS operating layer that tells a CSM which customer needs attention, why, and what to do next. The AI work and every approved action run through n8n workflows.</p>
+    <div class="facts">
+      <span><strong>2</strong> n8n workflows behind every AI call and approval</span>
+      <span><strong>6</strong> AI modes behind one webhook contract</span>
+      <span><strong>35</strong> fictional demo accounts</span>
+      <span><strong>218</strong> automated tests</span>
+    </div>
+    <p class="byline">Claudia Liersch · September 2026 · <a href="https://github.com/ClaudiaL-21/customer-success-ai-hub" style="color:#5EDBCB">Source on GitHub</a></p>
+  </div>
+</header>
+
+<main class="page">
+
+  <section class="col" aria-labelledby="problem">
+    <p class="eyebrow">The problem</p>
+    <h2 id="problem">CSMs have plenty of data and too little direction</h2>
+    <p>A CSM with 30+ accounts has usage data, tickets, emails, NPS and renewal dates spread across tools. The hard part is deciding on Monday morning which three customers to call and what to say. Generic AI summaries make this worse when they invent facts or suggest an upsell to an account that is about to churn.</p>
+    <p>I wanted a tool that ranks accounts with transparent rules, uses AI only where it adds judgement, and never lets an AI suggestion reach a customer without a human decision.</p>
+  </section>
+
+  <section style="display:grid; gap:24px" aria-labelledby="fit">
+    <div class="col">
+      <p class="eyebrow">Relevance to the role</p>
+      <h2 id="fit">How it maps to the Customer Experience &amp; Success Programs role</h2>
+      <p class="lede">Each line of the job description, next to what I built for it and where it can be seen.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Role responsibility</th><th>What I built</th><th>Where to see it</th></tr></thead>
+        <tbody>
+          <tr><td>Customer health scoring model</td><td>A deterministic Health Score from eight weighted criteria, plus separate Priority and Expansion scores. Every point is traceable to a data field.</td><td>Account detail, Matrix</td></tr>
+          <tr><td>QBRs and critical journey moments</td><td>A QBR Copilot that drafts twelve sections in three governed versions (internal, customer, presentation) and exports a web QBR and a PPTX.</td><td>QBRs view, video 1</td></tr>
+          <tr><td>Playbooks and engagement models</td><td>One concrete Next Best Action per account, with rationale, category and a mandatory human review before anything is sent.</td><td>AI Insight, video 2</td></tr>
+          <tr><td>Voice of customer and product feedback loops</td><td>A feature request view that aggregates requests across accounts and shows the ARR and estimated sentiment behind each one, for the product team.</td><td>Features view</td></tr>
+          <tr><td>Track adoption, churn, CSAT, NPS</td><td>Portfolio KPIs, renewal windows and ARR at risk, computed deterministically and never by the model.</td><td>Portfolio</td></tr>
+          <tr><td>Change management for CS tools</td><td>Visible guardrails, AI labelling and an EU AI Act readiness overview, so a CS team can trust the tool before adopting it.</td><td>Trust view</td></tr>
+          <tr><td>Workflow automation (nice to have)</td><td>Two n8n workflows: one runs all AI analysis, one executes approved actions with an audit log and email notification.</td><td>Architecture below</td></tr>
+          <tr><td>Launch a v1, measure, iterate</td><td>Built in short, numbered sprints with review rounds between them.</td><td>GitHub history</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section style="display:grid; gap:24px" aria-labelledby="arch">
+    <div class="col">
+      <p class="eyebrow">Architecture</p>
+      <h2 id="arch">The Hub decides what is true. n8n does the work.</h2>
+      <p class="lede">Scores and rankings are calculated in the Hub. n8n handles the two things that touch the outside world: calling an AI model, and executing an action a CSM has approved.</p>
+    </div>
+
+    <div class="lanes">
+      <div class="lane">
+        <div class="lane-head"><h3>Workflow 1 · Analyze</h3><p>every AI feature in the Hub</p></div>
+        <div class="flow" role="list">
+          <div class="step" role="listitem"><span class="who">CSM</span><span class="what">Clicks "Load AI Insights", asks a question or prepares a QBR</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="step" role="listitem"><span class="who">Hub API</span><span class="what">Builds the prompt from the account's real data</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="step n8n" role="listitem"><span class="who">n8n</span><span class="what">Webhook (header auth) → AI Agent on an OpenAI chat model → Respond to Webhook</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="step" role="listitem"><span class="who">Hub API</span><span class="what">Validates the JSON and applies guardrails before the CSM sees it</span></div>
+        </div>
+        <figure>
+          <img src="img/wf-analyze.png" alt="The CS AI Hub Analyze workflow in the n8n editor: Webhook, AI Agent with an OpenAI chat model, Respond to Webhook." loading="lazy">
+          <figcaption>The Analyze workflow. One AI Agent node handles all six modes; the Hub tells it which one through the prompt.</figcaption>
+        </figure>
+      </div>
+
+      <div class="lane">
+        <div class="lane-head"><h3>Workflow 2 · Approval</h3><p>runs only after a CSM confirms</p></div>
+        <div class="flow" role="list">
+          <div class="step" role="listitem"><span class="who">CSM</span><span class="what">Reviews, edits and confirms the Next Best Action</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="step n8n" role="listitem"><span class="who">n8n · Webhook</span><span class="what">Receives the approved action</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="step n8n" role="listitem"><span class="who">n8n · Google Sheets</span><span class="what">Append row in sheet: the audit log</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="step n8n" role="listitem"><span class="who">n8n · Gmail</span><span class="what">Send a message: the action summary</span></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="step n8n" role="listitem"><span class="who">n8n · Respond</span><span class="what">Confirms back to the Hub</span></div>
+        </div>
+      </div>
+    </div>
+
+    <figure>
+      <img src="img/wf-approval.png" alt="The CS AI Hub Approval workflow in the n8n editor: Webhook, Append row in sheet, Send a message, Respond to Webhook." loading="lazy">
+      <figcaption>The Approval workflow as it runs in n8n.</figcaption>
+    </figure>
+
+    <div class="two">
+      <div class="card">
+        <h3>One contract for six AI modes</h3>
+        <p>Portfolio summary, portfolio questions, account insight, account questions, team prioritisation and QBR drafts all use the same webhook. The Hub sends a system prompt, a user prompt and a token budget. n8n returns one field.</p>
+        <pre class="contract">// Hub → n8n
+{ "system": "...", "user": "...", "maxTokens": 3800 }
+
+// n8n → Hub
+{ "text": "&lt;model output as JSON&gt;" }</pre>
+        <p style="color:var(--muted); font-size:0.92rem">Switching the model or provider is a change inside n8n. The Hub doesn't need a release for it.</p>
+      </div>
+      <div class="card">
+        <h3>Built to fail safely</h3>
+        <ul>
+          <li>Every call carries a shared-secret header, <code>x-cs-ai-hub-secret</code>. Without the secret configured, the Hub makes no call at all.</li>
+          <li>Each workflow has its own bounded timeout, so a hanging model call can't block the CSM.</li>
+          <li>A response that breaks the contract is rejected, not "repaired".</li>
+          <li>Error bodies from n8n are never shown or logged, only the status.</li>
+          <li>A failed send is never retried automatically. The CSM's edits are kept and they decide.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid; gap:24px" aria-labelledby="design">
+    <div class="col">
+      <p class="eyebrow">Program design</p>
+      <h2 id="design">The CS decisions behind the software</h2>
+      <p class="lede">Most of the work was deciding what the AI may and may not do. These rules are enforced in code, not only asked for in a prompt.</p>
+    </div>
+    <div class="principles">
+      <div class="principle"><h3>The ranking is never the model's</h3><p>Which accounts come first is a fixed formula of risk, ARR, renewal date and engagement. The AI only explains the ranking and suggests actions.</p></div>
+      <div class="principle"><h3>One action, not a to-do list</h3><p>CSMs already have too many half-prioritised lists. The copilot must pick the single most important action and say why it beats the alternatives.</p></div>
+      <div class="principle"><h3>No upsell to a churning customer <span class="tag risk">hard rule</span></h3><p>If a high-risk account gets a growth suggestion, the server replaces it with a risk-mitigation action built only from known facts.</p></div>
+      <div class="principle"><h3>Recommend is not commit</h3><p>A timeframe the AI proposes is phrased as a proposal. Only commitments already documented in the account history may read as agreed.</p></div>
+      <div class="principle"><h3>Internal language stays internal <span class="tag rec">QBR</span></h3><p>Health scores, risk labels and CSM notes can't flow into the customer version of a QBR. Sensitive sections are blanked on the server, whatever the model returns.</p></div>
+      <div class="principle"><h3>Confidence means evidence <span class="tag ok">transparent</span></h3><p>Each insight shows how strong the underlying evidence is: how many sources, how recent, how varied. It never claims how likely the AI is to be right.</p></div>
+    </div>
+
+    <div class="card" style="max-width:760px">
+      <h3>Health Score criteria and weights</h3>
+      <p style="color:var(--muted); font-size:0.92rem">Risk points per criterion are subtracted from 100. Benelux Mobility Group, the demo's most at-risk account, scores 9.</p>
+      <div class="weights" role="list">
+        <div class="w-row" role="listitem"><span>Usage / adoption decline</span><div class="w-track"><div class="w-bar" style="width:80%"></div></div><span class="w-val">20%</span></div>
+        <div class="w-row" role="listitem"><span>Recurring ticket topic</span><div class="w-track"><div class="w-bar" style="width:60%"></div></div><span class="w-val">15%</span></div>
+        <div class="w-row" role="listitem"><span>CSAT trend, 8 weeks</span><div class="w-track"><div class="w-bar" style="width:60%"></div></div><span class="w-val">15%</span></div>
+        <div class="w-row" role="listitem"><span>Champion risk</span><div class="w-track"><div class="w-bar" style="width:60%"></div></div><span class="w-val">15%</span></div>
+        <div class="w-row" role="listitem"><span>NPS, 3 quarters</span><div class="w-track"><div class="w-bar" style="width:60%"></div></div><span class="w-val">15%</span></div>
+        <div class="w-row" role="listitem"><span>Interaction recency</span><div class="w-track"><div class="w-bar" style="width:40%"></div></div><span class="w-val">10%</span></div>
+        <div class="w-row" role="listitem"><span>Exec sponsor engagement</span><div class="w-track"><div class="w-bar" style="width:20%"></div></div><span class="w-val">5%</span></div>
+        <div class="w-row" role="listitem"><span>QBR cadence</span><div class="w-track"><div class="w-bar" style="width:20%"></div></div><span class="w-val">5%</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid; gap:24px" aria-labelledby="demo">
+    <div class="col">
+      <p class="eyebrow">See it working</p>
+      <h2 id="demo">Two guided tours</h2>
+      <p class="lede">The product tour walks through the views. The AI tour shows each AI feature with live output, ending with the approved action arriving in the sheet and the inbox.</p>
+    </div>
+    <div class="videos">
+      <figure>
+        <video src="video/product-tour.webm" controls preload="metadata" muted playsinline></video>
+        <figcaption>Video 1 · Product tour, 9 steps.</figcaption>
+      </figure>
+      <figure>
+        <video src="video/ai-tour.webm" controls preload="metadata" muted playsinline></video>
+        <figcaption>Video 2 · AI features, 9 steps, with live model output.</figcaption>
+      </figure>
+    </div>
+
+    <div class="gallery">
+      <figure>
+        <img src="img/summary.png" alt="Executive Portfolio Summary generated by the AI copilot, with links to the accounts behind each statement." loading="lazy">
+        <figcaption>Executive summary. Every statement links to the accounts it is based on.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/insight.png" alt="AI insight for Danube Logistics AG with sentiment, interpretation, evidence confidence and a risk-mitigation Next Best Action." loading="lazy">
+        <figcaption>Account insight. Fact, interpretation and recommendation are visually separated.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/review.png" alt="Human review form with the AI suggestion and editable category, action and rationale fields." loading="lazy">
+        <figcaption>Human review. The CSM edits the action before it goes to n8n.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/qbr.png" alt="QBR review showing internal, customer and presentation versions of the executive summary section." loading="lazy">
+        <figcaption>QBR draft in three governed versions.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/sheet.png" alt="Google Sheet audit log with one row per approved action, including the CSM's added step." loading="lazy">
+        <figcaption>Audit log written by n8n. The last row includes the CSM's own addition, step d.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/email.png" alt="Action approved email for Benelux Mobility Group with the recommended action and rationale." loading="lazy">
+        <figcaption>The summary email sent by n8n with the approved text.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="col next" aria-labelledby="nextup">
+    <p class="eyebrow" style="color:var(--rec)">Planned next · not built yet</p>
+    <h2 id="nextup">From static data to live customer signals</h2>
+    <p>The demo portfolio is still a fixed dataset. The next sprint connects the Hub to incoming customer emails and tickets through n8n:</p>
+    <ul style="margin:0; padding-left:1.1em; display:grid; gap:6px">
+      <li><strong>Signal intake:</strong> an AI step extracts account, sentiment, topic, urgency and feature requests from each message.</li>
+      <li><strong>Risk escalation:</strong> when a signal pushes an account over a threshold, the CSM gets a Slack message with a suggested action and approves it there.</li>
+      <li><strong>Weekly voice-of-customer digest:</strong> top feature requests by ARR, sent to product every Monday.</li>
+      <li><strong>Error workflow:</strong> any failed node alerts the owner immediately.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>All accounts, people and customer messages are fictional demo data. No real customer data is stored or sent.</p>
+    <p>Built iteratively with AI coding assistants (Claude Code and Codex) under my direction. Source: <a href="https://github.com/ClaudiaL-21/customer-success-ai-hub">github.com/ClaudiaL-21/customer-success-ai-hub</a></p>
+  </footer>
+</main>
+
+</body></html>

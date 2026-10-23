@@ -14,7 +14,8 @@ Die KI muss dieses JSON-Objekt zurückgeben. **Alle Felder sind erforderlich.** 
   "evidence": "string (1-300 chars, direct quote from email)",
   "classifier": "string (1-100 chars, e.g., 'gpt-5-mini-20260929')",
   "proposedAction": "string | null",
-  "proposedRationale": "string | null"
+  "proposedRationale": "string | null",
+  "proposedResponse": "string | null"
 }
 ```
 
@@ -23,10 +24,12 @@ Die KI muss dieses JSON-Objekt zurückgeben. **Alle Felder sind erforderlich.** 
 - **Wenn `signalType` = "risk" oder "growth":**
   - `proposedAction` MUSS ein non-empty String sein (1-700 chars)
   - `proposedRationale` MUSS ein non-empty String sein (1-500 chars)
+  - `proposedResponse` MUSS ein non-empty String sein (1-1500 chars) — ein versandfertiger Antwortentwurf an den Kunden. Bleibt inert (nie automatisch versendet) bis ein CSM die Aktion in Gate 2 freigibt; erst dann wird daraus ein Gmail-Draft.
 
 - **Wenn `signalType` = "routine":**
   - `proposedAction` MUSS null sein
   - `proposedRationale` MUSS null sein
+  - `proposedResponse` MUSS null sein
 
 - Alle String-Felder werden trimmt (führend/nachfolgende Whitespace entfernt)
 
@@ -54,7 +57,7 @@ if (!["low", "medium", "high"].includes(ai_output.urgency)) {
 }
 
 // 2. String length validation
-const limits = { topic: 100, summary: 500, evidence: 300, classifier: 100, proposedAction: 700, proposedRationale: 500 };
+const limits = { topic: 100, summary: 500, evidence: 300, classifier: 100, proposedAction: 700, proposedRationale: 500, proposedResponse: 1500 };
 for (const [field, max] of Object.entries(limits)) {
   const val = (ai_output[field] || "").trim();
   if (val.length > max) {
@@ -70,9 +73,12 @@ if (["risk", "growth"].includes(ai_output.signalType)) {
   if (!ai_output.proposedRationale || ai_output.proposedRationale.trim().length === 0) {
     errors.push("proposedRationale is required for risk/growth signals");
   }
+  if (!ai_output.proposedResponse || ai_output.proposedResponse.trim().length === 0) {
+    errors.push("proposedResponse is required for risk/growth signals");
+  }
 } else if (["routine"].includes(ai_output.signalType)) {
-  if (ai_output.proposedAction || ai_output.proposedRationale) {
-    errors.push("proposedAction and proposedRationale must be null for routine signals");
+  if (ai_output.proposedAction || ai_output.proposedRationale || ai_output.proposedResponse) {
+    errors.push("proposedAction, proposedRationale, and proposedResponse must be null for routine signals");
   }
 }
 
@@ -101,7 +107,8 @@ Dieses Payload wird an `POST /functions/v1/customer-signal-ingress` mit Header `
   "evidence": "{{ validated_ai_output.evidence }}",
   "classifier": "{{ validated_ai_output.classifier }}",
   "proposedAction": "{{ validated_ai_output.proposedAction }}",
-  "proposedRationale": "{{ validated_ai_output.proposedRationale }}"
+  "proposedRationale": "{{ validated_ai_output.proposedRationale }}",
+  "proposedResponse": "{{ validated_ai_output.proposedResponse }}"
 }
 ```
 
