@@ -1,0 +1,403 @@
+{
+  "name": "CS AI Hub Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "58ead7e5-c642-4ecd-ad17-5306baef877f",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        -48
+      ],
+      "id": "910331a0-81cd-486b-9a1a-dd257d3d54e5",
+      "name": "Webhook",
+      "webhookId": "58ead7e5-c642-4ecd-ad17-5306baef877f",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZzO4crT7etcZ2u6U",
+          "name": "Header Auth account 27"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"sent\",\n  \"workflowConnected\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        -48
+      ],
+      "id": "644702a8-2055-478f-85f7-35b36dcb5be7",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1amDljq7NX7XDa2ibh3B2QNU5G_rrrzraTx_5W9BPOQ0",
+          "mode": "list",
+          "cachedResultName": "CS AI Hub Approval",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1amDljq7NX7XDa2ibh3B2QNU5G_rrrzraTx_5W9BPOQ0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Approvals",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1amDljq7NX7XDa2ibh3B2QNU5G_rrrzraTx_5W9BPOQ0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Datum (approvedAt)": "={{ DateTime.fromISO($json.body.approvedAt).setZone('Europe/Berlin').toFormat('dd.MM.yyyy HH:mm') }}",
+            "Account (accountName)": "={{ $json.body.accountName }}",
+            "CSM (csmName)": "={{ $json.body.csmName }}",
+            "Account ID (ACC)": "={{ $json.body.accountId }}",
+            "Action (action)": "={{ $json.body.action }}",
+            "Kategorie (category)": "={{ $json.body.category }}",
+            "Begründung (rationale)": "={{ $json.body.rationale }}",
+            "row_number": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Datum (approvedAt)",
+              "displayName": "Datum (approvedAt)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Account ID (ACC)",
+              "displayName": "Account ID (ACC)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Account (accountName)",
+              "displayName": "Account (accountName)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CSM (csmName)",
+              "displayName": "CSM (csmName)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Action (action)",
+              "displayName": "Action (action)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kategorie (category)",
+              "displayName": "Kategorie (category)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Begründung (rationale)",
+              "displayName": "Begründung (rationale)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        -48
+      ],
+      "id": "a9d63576-b4f9-4f94-b30b-efe81c0e152a",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "BDU0UXG43opcgLCY",
+          "name": "Google Sheets account 105"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=[Action approved] {{ $json['Kategorie (category)'] }} · {{ $json['Account (accountName)'] }}",
+        "emailType": "html",
+        "message": "=<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f4f6f8;padding:32px 12px;\"><tr><td align=\"center\"><table role=\"presentation\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:640px;width:100%;background-color:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(15,23,42,0.07);\"><tr><td style=\"background-color:#153450;padding:16px 28px;border-top:3px solid #14b8a6;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#ffffff;\">Customer Success AI Hub</td></tr></table></td></tr><tr><td style=\"padding:14px 28px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;\">Action approved</td></tr><tr><td style=\"padding:14px 28px 0;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"background-color:{{ $json['Kategorie (category)'] === 'risk_mitigation' ? '#fef2f2' : '#ecfdf3' }};border-radius:999px;padding:5px 14px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;color:{{ $json['Kategorie (category)'] === 'risk_mitigation' ? '#dc2626' : '#16a34a' }};\">{{ $json['Kategorie (category)'] }}</td></tr></table></td></tr><tr><td style=\"padding:18px 28px 16px;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;color:#6b7280;border-bottom:1px solid #e5e7eb;\"><strong style=\"color:#1f2937;\">{{ $json['Account (accountName)'] }}</strong> &middot; Account ID {{ $json['Account ID (ACC)'] }} &middot; CSM {{ $json['CSM (csmName)'] }} &middot; Approved {{ $json['Datum (approvedAt)'] }}</td></tr><tr><td style=\"padding:20px 28px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:.03em;\">Recommended action</td></tr><tr><td style=\"padding:8px 28px 0;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#ecfdfa;border-radius:8px;\"><tr><td width=\"4\" style=\"background-color:#14b8a6;border-radius:8px 0 0 8px;\">&nbsp;</td><td style=\"padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1f2937;font-weight:600;\">{{ $json['Action (action)'].replace(/\\n/g, '<br>') }}\n</td></tr></table></td></tr><tr><td style=\"padding:16px 28px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:.03em;\">Rationale</td></tr><tr><td style=\"padding:8px 28px 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#374151;\">{{ $json['Begründung (rationale)'] }}</td></tr><tr><td style=\"padding:24px 28px;border-top:1px solid #e5e7eb;\"><p style=\"margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#9ca3af;line-height:1.5;\">AI-generated suggestion, reviewed and approved by a human before sending.</p></td></tr></table></td></tr></table>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        -48
+      ],
+      "id": "a947847e-3461-47a1-a6d1-e13e8dbea20f",
+      "name": "Create a draft1",
+      "webhookId": "580e4f7c-e083-4f8e-aaf2-9126aa85152a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4UEpD2Dsd72nJdON",
+          "name": "Gmail account 177"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "democsaihub@gmail.com",
+        "subject": "={{ $('Webhook').item.json.body.customerDraft.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Webhook').item.json.body.customerDraft.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        -48
+      ],
+      "id": "2f2eb098-7670-4dae-ab1a-be7b15aa1441",
+      "name": "Send a message",
+      "webhookId": "561960ea-c12a-4604-8b81-f8e4c6392812",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4UEpD2Dsd72nJdON",
+          "name": "Gmail account 177"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## CS AI Hub · Approval\nRuns only after a CSM has **confirmed the account and approved the action** in the Hub (Gate 2). The AI never triggers this workflow.\n\nWrites an audit row, sends an internal summary and prepares the reply as a **Gmail draft**. Nothing is sent to a customer automatically.\n\n**Colors:** yellow = intake · green = audit · purple = notify and draft",
+        "height": 694,
+        "width": 1316,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -368
+      ],
+      "id": "fb5b0b44-6aa7-43e9-87ef-d18a336c8ae1",
+      "name": "Note: Purpose"
+    },
+    {
+      "parameters": {
+        "content": "### 1 · Intake\nApproved action arrives from the Hub webhook.",
+        "height": 308,
+        "width": 204
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        -160
+      ],
+      "id": "2c191c40-9058-4e03-8385-31d038663ec0",
+      "name": "Note: 1 Intake"
+    },
+    {
+      "parameters": {
+        "content": "### 2 · Audit\nEvery approval is logged to the Google Sheet.",
+        "height": 308,
+        "width": 198,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -160
+      ],
+      "id": "bc316c61-df75-4518-b357-5ce1dc730179",
+      "name": "Note: 2 Audit"
+    },
+    {
+      "parameters": {
+        "content": "### 3 · Notify and draft\nInternal summary goes to the team mailbox (a separate account, so it cannot loop back into the customer inbox). The customer reply becomes a **draft** in the original mailbox; the CSM reviews, edits and sends it. If an approval carries no prepared reply (for example an AI insight), the reply step is skipped.",
+        "height": 308,
+        "width": 836,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -160
+      ],
+      "id": "a5592be0-5630-4f9f-a16d-0e56467a7d05",
+      "name": "Note: 3 Notify and draft"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "fd89c8fd-5989-42ad-9331-b713af9a1c5c",
+              "leftValue": "={{ $('Webhook').item.json.body.customerDraft?.body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        400,
+        -48
+      ],
+      "id": "0b01ab40-df38-4f93-a73f-f3f2f7b8e9a7",
+      "name": "Customer reply prepared?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Create a draft1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a draft1": {
+      "main": [
+        [
+          {
+            "node": "Customer reply prepared?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer reply prepared?": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "d2c6415c-cb51-4b80-a3d6-e2172d91430b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c7c6732612f371ece85bad3980d0232c4c37b661169bdc3800c645e7b066ff77"
+  },
+  "nodeGroups": [],
+  "id": "1B9OmERVkHNKXvjf",
+  "tags": []
+}
