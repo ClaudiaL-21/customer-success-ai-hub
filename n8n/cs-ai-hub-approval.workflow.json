@@ -225,7 +225,7 @@
     },
     {
       "parameters": {
-        "content": "## CS AI Hub · Approval\nRuns only after a CSM has **confirmed the account and approved the action** in the Hub (Gate 2). The AI never triggers this workflow.\n\nWrites an audit row, sends an internal summary and prepares the reply as a **Gmail draft**. Nothing is sent to a customer automatically.\n\n**Colors:** yellow = intake · green = audit · purple = notify and draft",
+        "content": "## CS AI Hub · Approval\nRuns only after a CSM has **confirmed the account and approved the action** in the Hub (Gate 2). The AI never triggers this workflow.\n\nWrites an audit row, saves an internal summary as a Gmail draft and sends the prepared customer reply to a test mailbox that stands in for the customer. In production this step would create a draft for the CSM to review.\n\n**Colors:** yellow = intake · green = audit · purple = notify and draft",
         "height": 694,
         "width": 1316,
         "color": 7
@@ -272,7 +272,7 @@
     },
     {
       "parameters": {
-        "content": "### 3 · Notify and draft\nInternal summary goes to the team mailbox (a separate account, so it cannot loop back into the customer inbox). The customer reply becomes a **draft** in the original mailbox; the CSM reviews, edits and sends it. If an approval carries no prepared reply (for example an AI insight), the reply step is skipped.",
+        "content": "### 3 · Notify and draft\nInternal summary goes to the team mailbox (a separate account, so it cannot loop back into the customer inbox). The customer reply goes to a test mailbox that stands in for the customer; in production it becomes a draft the CSM reviews, edits and sends. If an approval carries no prepared reply (for example an AI insight), the reply step is skipped.",
         "height": 308,
         "width": 836,
         "color": 6
@@ -392,7 +392,7 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "d2c6415c-cb51-4b80-a3d6-e2172d91430b",
+  "versionId": "a921849f-ea32-4667-9607-aaaad4f41813",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "c7c6732612f371ece85bad3980d0232c4c37b661169bdc3800c645e7b066ff77"
