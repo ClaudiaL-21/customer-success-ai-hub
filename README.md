@@ -55,7 +55,6 @@ Starts a dependency-free local server (frontend + serverless functions) on http:
 The human-approval workflow and a live email intake are built and tested end to end. A customer email becomes an unconfirmed signal; an AI prepares a classification, a next action and a draft reply; a person confirms the account (Gate 1) and approves the action (Gate 2); only then does n8n act.
 
 - **n8n workflows** (exported JSON, documented with sticky notes): [n8n/](n8n/), with email intake, AI analysis and the approval workflow described in [docs/06_n8n_integration.md](docs/06_n8n_integration.md) and [docs/15C_email_ingestion_payload_schema.md](docs/15C_email_ingestion_payload_schema.md)
-- **Project summary with screenshots and links:** [docs/n8n_application_brief.md](docs/n8n_application_brief.md)
 - **Case study:** https://claude.ai/artifact/JwwsD8FEvDf5WxVBdpXJmg
 - **Clickable prototypes:** [Hub](https://claude.ai/artifact/UHd4SESuoxqyHK8YM7ZDtb) and [QBR](https://claude.ai/artifact/FkAoRy42trDBE2P6rb7ViY)
 
