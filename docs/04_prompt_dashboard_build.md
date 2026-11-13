@@ -16,10 +16,9 @@ someone managing an international team, not a marketing dashboard.
 # Context
 This project is a portfolio case study for a repositioning toward "CX Systems
 & AI Enablement Specialist". The domain logic is inspired by real experience
-leading an international Customer Success Management team (EMEA/APAC) at SAS
-Institute, managing accounts licensed on SAS CI360 (a Customer Intelligence /
-CDP platform) and using Gainsight as the CS operations platform. You may
-reference SAS CI360 and Gainsight by name in documentation/README as the real
+leading an international Customer Success Management team (EMEA/APAC) at a US enterprise
+software company, managing accounts licensed on a SaaS customer data platform (CDP) and using Gainsight as the CS operations platform. You may
+reference the CDP product and Gainsight by name in documentation/README as the real
 professional context that informs this project's design — but ALL account
 data, contract values, module names, and personal names in this project are
 entirely fictional (see data/accounts.json), and this must stay explicit
@@ -100,7 +99,7 @@ with two more criteria (NPS, Champion risk) added based on real CS practice.
 - Clean, scannable layout: table/list-first, not a chart-heavy dashboard.
   Use color coding (green/orange/red) consistent with churn risk category.
 - README covering: what this demonstrates, the real-world context that
-  inspired it (SAS CI360 / Gainsight experience, named explicitly), local
+  inspired it (CDP / Gainsight experience, described generically), local
   setup, and Vercel deploy steps.
 
 # Constraints

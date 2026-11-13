@@ -4,7 +4,7 @@
 
 An AI-powered Customer Success prototype that turns fragmented customer signals — usage, support, relationship, contract — into transparent priorities, an explainable Health Score, and human-approved next actions. Portfolio project for repositioning as a *CX Systems & AI Enablement Specialist* (and final project for a KI-Manager certificate course).
 
-The domain logic (modular licensing, sessions/user usage, weekly CSAT, quarterly NPS, renewal/QBR cadence, champion risk) is inspired by real experience as Head of Customer Success Management (EMEA/APAC) at SAS Institute, with SAS CI360 as the licensed product and Gainsight as the CS platform. **All customers, people, contracts, and figures in this project are entirely fictional** — no real customer data, module names, or prices.
+The domain logic (modular licensing, sessions/user usage, weekly CSAT, quarterly NPS, renewal/QBR cadence, champion risk) is inspired by real experience as Head of Customer Success Management (EMEA/APAC) at a US enterprise software company, with a SaaS customer data platform (CDP) as the licensed product and Gainsight as the CS platform. **All customers, people, contracts, and figures in this project are entirely fictional** — no real customer data, module names, or prices.
 
 ## Project brief
 

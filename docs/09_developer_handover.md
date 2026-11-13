@@ -29,7 +29,7 @@ Beantwortet für einen CSM: *"Welcher Kunde braucht jetzt meine Aufmerksamkeit, 
 
 - **Trennung deterministisch/generativ ist das Kernprinzip**: Formeln bestimmen Zahlen/Reihenfolge, AI liefert nur Erklärung + Handlungsvorschlag, nie eigene Scores
 - AI-Prompts erzwingen explizit "nutze nur die gegebene Zahl als Score, erfinde keine neue" (siehe `SYSTEM_PROMPT` in `api/analyze.js`)
-- Kein Datenbankschicht bisher — bewusst noch nicht gebaut, siehe `docs/08_architecture_concept.md` für den geplanten Wechsel zu Supabase (volle Migration, kein Hybrid — Begründung dort)
+- Kein Datenbankschicht bisher — bewusst noch nicht gebaut, siehe die interne Konzeptnotiz (nicht im Repo) für den geplanten Wechsel zu Supabase (volle Migration, kein Hybrid — Begründung dort)
 - n8n wird für zwei unabhängige Zwecke genutzt: (a) optional als AI-Compute-Layer, (b) für den Approval-Workflow (Google Sheet Log) — beide über separate Webhook-URLs
 
 ## 5. Bekannte Probleme und technische Schulden
@@ -46,7 +46,7 @@ Beantwortet für einen CSM: *"Welcher Kunde braucht jetzt meine Aufmerksamkeit, 
 
 ## 6. Offene Aufgaben, priorisiert
 
-Siehe `docs/07_response_to_chatgpt_review.md` Abschnitt 5 für die vollständige, mit dem Co-PO abgestimmte Priorisierung. Kurzfassung:
+Die vollständige Priorisierung liegt in einer internen Notiz (nicht im Repo). Kurzfassung:
 
 1. Expansion-Guardrail hart erzwingen (High-Risk-Accounts → keine Growth-Empfehlung)
 2. Confidence aus messbaren Faktoren statt LLM-Selbstauskunft
@@ -70,7 +70,6 @@ Siehe `docs/07_response_to_chatgpt_review.md` Abschnitt 5 für die vollständige
 | `dev-server.js` | Lokaler Server ohne Vercel-Abhängigkeit |
 | `docs/05_project_brief.md` | Verbindlicher Projekt-Brief |
 | `docs/06_n8n_integration.md` | n8n-Setup-Anleitung |
-| `docs/07_response_to_chatgpt_review.md`, `docs/08_architecture_concept.md` | Aktuelle Review-/Architektur-Diskussion (Konzept, noch nicht gebaut) |
 
 ## 8. Lokal starten, testen, builden
 
@@ -82,7 +81,7 @@ Kein separater Build- oder Test-Schritt vorhanden — keine automatisierten Test
 ## 9. Git-Status (Stand 2026-08-13, ungeprüft eingecheckt)
 
 Modifiziert, nicht committed: `api/analyze.js`, `index.html`, `src/ai.js`, `src/app.js`, `src/scoring.js`, `src/styles.css`
-Neu, nicht getrackt: `.claude/` (lokale Preview-Konfiguration), `docs/07_response_to_chatgpt_review.md`, `docs/08_architecture_concept.md`
+Neu, nicht getrackt: `.claude/` (lokale Preview-Konfiguration)
 Diese Änderungen enthalten die in Abschnitt 3 gelisteten Funktionen (Priority-Formel, Portfolio-Ask, Sparkline, Reload-Buttons) — noch kein Commit erfolgt.
 
 ## 10. Bewusst nicht umgesetzte Entscheidungen

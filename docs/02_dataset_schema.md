@@ -2,7 +2,7 @@
 
 **Datei:** `data/accounts.json`
 **Stand:** generiert für 2026-08-10, 25 fiktive Accounts, 4 fiktive CSMs.
-**Wichtig:** Alle Kunden, Personen und Zahlen sind vollständig erfunden. Die Domänenlogik (Modul-basierte Lizenzierung, Sessions/User als Nutzungssignal, wöchentliches CSAT, periodisches NPS, QBR-Rhythmus) ist inspiriert von echter Berufserfahrung als Head of CSM (EMEA/APAC) mit SAS CI360 als lizenziertem Produkt und Gainsight als CS-Plattform — keine echten Kundendaten, Modul-Namen oder Preise wurden übernommen.
+**Wichtig:** Alle Kunden, Personen und Zahlen sind vollständig erfunden. Die Domänenlogik (Modul-basierte Lizenzierung, Sessions/User als Nutzungssignal, wöchentliches CSAT, periodisches NPS, QBR-Rhythmus) ist inspiriert von echter Berufserfahrung als Head of CSM (EMEA/APAC) mit einer SaaS-CDP-Software als lizenziertem Produkt und Gainsight als CS-Plattform — keine echten Kundendaten, Modul-Namen oder Preise wurden übernommen.
 
 ## Warum diese Struktur
 
@@ -69,7 +69,7 @@ location: { city, country, lat, lng }
 - **Währung:** USD für ARR (global gängiger SaaS-Reporting-Standard). Sag Bescheid, falls EUR passender ist.
 - **CSAT-Skala:** 1-5 in 0,5er-Schritten, wöchentlich erfasst (wie in deinem Gainsight-Setup vermutlich üblich).
 - **NPS:** 0-10 Einzelwert pro Quartal und Account (nicht der aggregierte Firmen-NPS über alle Kunden, sondern der letzte Account-Score) — das war dein Hinweis "wir haben viel mit NPS gearbeitet", jetzt als dritte Zufriedenheits-Dimension neben CSAT ergänzt.
-- **Module:** 6 generische Modulnamen (Journey Orchestration, Digital Intelligence, Identity Resolution, Offer Management, Data Activation Hub, Predictive Analytics) — bewusst nicht die echten CI360-Modulnamen, um near-realistische aber vertraulichkeitsfreie Daten zu haben.
+- **Module:** 6 generische Modulnamen (Journey Orchestration, Digital Intelligence, Identity Resolution, Offer Management, Data Activation Hub, Predictive Analytics) — bewusst nicht die echten CDP-Modulnamen, um near-realistische aber vertraulichkeitsfreie Daten zu haben.
 - **Vertragslogik:** `nextRenewalDate` ist immer ein jährlicher Termin (auch bei Mehrjahresverträgen), passend zu deiner Beschreibung "Mehrjahresverträge mit jährlichem Renewal-Termin".
 
 ## Nächster Schritt

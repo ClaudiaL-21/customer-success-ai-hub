@@ -1,6 +1,6 @@
 # KPI-Katalog — Account Health Copilot
 
-Konsolidierte KPI-Liste für das Head-of-CS-Dashboard, abgeleitet aus realer CSM-Praxis (SAS CI360 / Gainsight) und ergänzt um Vorschläge als erfahrener Projektleiter. Dient als verbindliche Grundlage für den Build-Prompt.
+Konsolidierte KPI-Liste für das Head-of-CS-Dashboard, abgeleitet aus realer CSM-Praxis (SaaS-CDP / Gainsight) und ergänzt um Vorschläge als erfahrener Projektleiter. Dient als verbindliche Grundlage für den Build-Prompt.
 
 ## 1. Vertrag & Commercial
 - Account-Name, Region/Subregion, zuständiger CSM
