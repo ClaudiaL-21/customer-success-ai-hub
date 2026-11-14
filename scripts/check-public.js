@@ -52,7 +52,7 @@ const ALLOWED_PATH_CONTENT = [
   { file: /^supabase\/migrations\//, re: /googlemail\.com/i },
 ];
 
-const SKIP_FILES = /(^|\/)package-lock\.json$|\.(png|jpe?g|gif|webp|ico|pdf|pptx|woff2?)$/i;
+const SKIP_FILES = /^scripts\/check-public\.js$|(^|\/)package-lock\.json$|\.(png|jpe?g|gif|webp|ico|pdf|pptx|woff2?)$/i;
 const MAX_LINE = 2000; // skip inline base64 blobs (SVG logos etc.)
 
 function trackedFiles() {
