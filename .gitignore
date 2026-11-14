@@ -6,3 +6,16 @@
 node_modules
 supabase/.temp/
 supabase/.branches/
+
+# Private material must never be tracked in this public repo.
+# Keep it outside the repository, or inside these folders.
+private/
+notes/
+internal-notes/
+*.mp4
+*.mov
+*.m4v
+*.heic
+*Bewerbung*
+*Lebenslauf*
+*application_brief*

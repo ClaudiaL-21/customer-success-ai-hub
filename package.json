@@ -9,7 +9,8 @@
     "dev:local": "node dev-server.js",
     "dev": "npx --yes vercel dev",
     "enrich-data": "node scripts/enrich-history.js",
-    "test": "node --test"
+    "test": "node --test",
+    "check:public": "node scripts/check-public.js"
   },
   "dependencies": {
     "pptx-automizer": "^0.9.0",
