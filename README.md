@@ -38,6 +38,7 @@ customer-success-ai-hub/
 ├── api/                  ← serverless AI layer
 ├── n8n/                  ← exported n8n workflows (JSON)
 ├── supabase/             ← migrations, edge functions, seed data
+├── prototypes/           ← backup of the interactive prototypes
 ├── tests/                ← automated tests
 └── data/
     └── accounts.json     ← 35 fictional accounts, 6 fictional CSMs

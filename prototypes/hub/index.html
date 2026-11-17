@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+
+<title>CS AI Hub Prototype</title>
+<style>
+:root {
+  --teal-dark: #0d3b3e;
+  --teal: #1a8a86;
+  --teal-bright: #14b8a6;
+  --ink: #17202a;
+  --muted: #5b6b73;
+  --bg: #eef2f3;
+  --card-bg: #ffffff;
+  --border: #e1e8ea;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ---- Navigation ---- */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 0.65rem 1.5rem;
+  background: var(--teal-dark);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.topnav .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  margin-right: 0.5rem;
+}
+
+.topnav .brand .ring {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--teal-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topnav .brand .ring::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--teal-bright);
+  border-radius: 50%;
+}
+
+.topnav .brand span.hub {
+  color: var(--teal-bright);
+}
+
+.navlinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  overflow-x: auto;
+}
+
+.navlinks a {
+  color: #cfe4e3;
+  text-decoration: none;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.navlinks a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.navlinks a.active {
+  background: var(--teal-bright);
+  color: var(--teal-dark);
+  font-weight: 700;
+}
+
+/* ---- Page content ---- */
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 2rem 1rem 3rem;
+}
+
+.slide-frame {
+  width: 100%;
+  max-width: 1200px;
+}
+
+.slide-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(13, 59, 62, 0.15);
+  border: 1px solid var(--border);
+}
+
+/* ---- Hero / start page ---- */
+.hero-frame img {
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(13, 59, 62, 0.22);
+}
+
+.hero-caption {
+  text-align: center;
+  margin-top: 1.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.hero-caption strong {
+  color: var(--teal-dark);
+}
+
+/* ---- Clickable hotspots over slide images ---- */
+.hotspot-layer {
+  position: relative;
+  line-height: 0;
+}
+
+.hotspot-layer img {
+  position: relative;
+  z-index: 1;
+}
+
+.hotspot {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(20, 184, 166, 0);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.hotspot:hover,
+.hotspot:focus-visible {
+  background: rgba(20, 184, 166, 0.14);
+  border-color: rgba(20, 184, 166, 0.65);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+  outline: none;
+}
+
+.hotspot.logo-hotspot {
+  border-radius: 10px;
+}
+
+/* Chart hotspots open a zoom lightbox instead of navigating */
+.hotspot.chart-hotspot {
+  padding: 0;
+  font: inherit;
+  position: absolute;
+}
+
+.hotspot.chart-hotspot::after {
+  content: "🔍 Zoom";
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: var(--teal-dark);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.hotspot.chart-hotspot:hover::after,
+.hotspot.chart-hotspot:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hotspot.chart-hotspot:hover,
+.hotspot.chart-hotspot:focus-visible {
+  cursor: zoom-in;
+}
+
+/* ---- Lightbox ---- */
+.lightbox-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(13, 59, 62, 0.86);
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 4vw;
+  cursor: zoom-out;
+}
+
+.lightbox-overlay.active {
+  display: flex;
+}
+
+.lightbox-zoom-frame {
+  background-color: #fff;
+  background-repeat: no-repeat;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 22px;
+  right: 28px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.lightbox-hint {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #cfe4e3;
+  font-size: 0.8rem;
+}
+
+/* ---- Live simulation overlays ---- */
+.live-mask {
+  position: absolute;
+  z-index: 3;
+  background: #ffffff;
+  border-radius: 8px;
+  display: none; /* Simulation ist per Default deaktiviert -> Originalbild sichtbar */
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.live-number-mask .live-number {
+  font-weight: 800;
+  color: var(--teal);
+  font-size: clamp(0.85rem, 2.3vw, 1.9rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.live-donut-mask {
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 3%;
+  gap: 3%;
+}
+
+.live-donut {
+  width: 60%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.live-donut::before {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  background: #ffffff;
+  border-radius: 50%;
+}
+
+.live-donut-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.live-donut-value {
+  font-weight: 800;
+  color: var(--teal);
+  font-size: clamp(0.8rem, 1.9vw, 1.6rem);
+  line-height: 1;
+}
+
+.live-donut-label {
+  font-size: clamp(0.4rem, 0.85vw, 0.68rem);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.live-legend {
+  display: flex;
+  gap: 8%;
+  font-size: clamp(0.38rem, 0.8vw, 0.65rem);
+  color: var(--ink);
+  align-items: center;
+  white-space: nowrap;
+}
+
+.live-legend .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.dot-active {
+  background: var(--teal-bright);
+}
+
+.dot-inactive {
+  background: #dbe4e5;
+}
+
+/* ---- Simulation control panel ---- */
+.sim-panel {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.1rem 1.4rem 1.3rem;
+  box-shadow: 0 6px 20px rgba(13, 59, 62, 0.08);
+}
+
+.sim-panel-header {
+  font-weight: 700;
+  color: var(--teal-dark);
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+}
+
+.sim-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.sim-panel-row label {
+  color: var(--ink);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.sim-panel input[type="range"] {
+  flex: 1;
+  accent-color: var(--teal-bright);
+  transition: opacity 0.15s ease;
+}
+
+.sim-panel input[type="range"]:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sim-panel-value {
+  font-weight: 800;
+  color: var(--teal);
+  min-width: 3.2rem;
+  text-align: right;
+  font-size: 1.05rem;
+  transition: opacity 0.15s ease;
+}
+
+.sim-panel-value.is-inactive {
+  opacity: 0.35;
+}
+
+.sim-panel-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 0.6rem 0 0;
+}
+
+.sim-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.sim-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sim-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.sim-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: #cfd8da;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.sim-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.sim-toggle input:checked ~ .sim-toggle-track {
+  background: var(--teal-bright);
+}
+
+.sim-toggle input:checked ~ .sim-toggle-track .sim-toggle-thumb {
+  transform: translateX(18px);
+}
+
+.sim-toggle-label {
+  font-size: 0.84rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.sim-toggle-label.is-active {
+  color: var(--teal);
+}
+
+/* ---- Nav icon group: Tour, Vollbild, Hamburger ---- */
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.tour-nav-btn {
+  background: var(--teal-bright);
+  color: var(--teal-dark) !important;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem !important;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.tour-nav-btn:hover {
+  background: #35d6c4;
+}
+
+.fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.fullscreen-btn.is-active {
+  background: var(--teal-bright);
+  color: var(--teal-dark);
+}
+
+.nav-toggle-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.nav-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-toggle-btn span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-toggle-btn.is-active span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.nav-toggle-btn.is-active span:nth-child(2) {
+  opacity: 0;
+}
+
+.nav-toggle-btn.is-active span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* ---- Mobile nav: collapsible menu ---- */
+@media (max-width: 760px) {
+  .topnav {
+    gap: 0.75rem;
+  }
+
+  .nav-toggle-btn {
+    display: flex;
+  }
+
+  .navlinks {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.15rem;
+    order: 10;
+    margin-top: 0.4rem;
+    overflow-x: visible;
+  }
+
+  .navlinks.is-open {
+    display: flex;
+  }
+
+  .navlinks a {
+    padding: 0.65rem 0.8rem;
+  }
+
+  .nav-icons {
+    margin-left: auto;
+  }
+}
+
+.tour-spotlight {
+  position: fixed;
+  z-index: 1600;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(10, 20, 25, 0.12);
+  pointer-events: none;
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  border: 2px solid var(--teal-bright);
+}
+
+.tour-tooltip {
+  position: fixed;
+  z-index: 1601;
+  width: min(320px, 86vw);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.32);
+  padding: 1rem 1.1rem;
+  transition: top 0.25s ease, left 0.25s ease;
+}
+
+.tour-tooltip-step {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--teal);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.3rem;
+}
+
+.tour-tooltip-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--teal-dark);
+  margin-bottom: 0.4rem;
+}
+
+.tour-tooltip-text {
+  font-size: 0.85rem;
+  color: var(--ink);
+  line-height: 1.45;
+  margin: 0 0 0.9rem;
+}
+
+.tour-tooltip-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tour-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.tour-btn-primary {
+  background: var(--teal-bright);
+  color: #0d3b3e;
+}
+
+.tour-btn-primary:hover {
+  background: #35d6c4;
+}
+
+.tour-btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  padding-left: 0;
+}
+
+.tour-btn-ghost:hover {
+  color: var(--ink);
+}
+
+html { scroll-behavior: auto; }
+.hotspot-layer img { display: block; }
+</style>
+<nav class="topnav">
+  <a class="brand" href="#index" id="brandLink">
+    <span class="ring"></span>
+    CUSTOMER SUCCESS <span class="hub">AI&nbsp;|&nbsp;HUB</span>
+  </a>
+  <div class="navlinks" id="navLinks"><a href="#index" data-page="index">Portfolio</a><a href="#matrix" data-page="matrix">Matrix</a><a href="#team" data-page="team">Team</a><a href="#map" data-page="map">Map</a><a href="#qbrs" data-page="qbrs">QBRs</a><a href="#inbox" data-page="inbox">Inbox</a><a href="#features" data-page="features">Features</a><a href="#trust" data-page="trust">Trust</a></div>
+  <div class="nav-icons">
+    <button type="button" class="tour-nav-btn" data-tour-start="product">&#9654; Product Tour</button>
+    <button type="button" class="tour-nav-btn" data-tour-start="ai">&#9654; AI Feature Tour</button>
+    <button type="button" class="tour-nav-btn" data-tour-start="email">&#9654; Email Flow Tour</button>
+    <button type="button" class="fullscreen-btn" id="fullscreenBtn" title="Fullscreen" aria-label="Fullscreen">&#x26F6;</button>
+    <button type="button" class="nav-toggle-btn" id="navToggleBtn" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<main id="stage"></main>
+
+<script>
+
+</script>
+<script>
+(function () {
+  var PAGES = {"account": {"title": "Account & AI Insight – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/2-account.png\" alt=\"Account detail with AI Insight\">\n      <a class=\"hotspot\" href=\"#matrix\" title=\"To: Matrix\" data-tour=\"1\" style=\"left:0%; top:15%; width:16%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "ai-ask-account": {"title": "AI Copilot: Ask about this Account – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-5-ask-account.png\" alt=\"Ask about this Account — a question specific to one customer\">\n      <a class=\"hotspot\" href=\"#ai-qbr\" title=\"Next: Prepare QBR\" data-tour=\"4\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "ai-ask-portfolio": {"title": "AI Copilot: Ask about this Portfolio – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-2-ask-portfolio.png\" alt=\"Ask about this Portfolio — a free-text question with a real answer\">\n      <a class=\"hotspot\" href=\"#ai-insight\" title=\"Next: AI Insight\" data-tour=\"1\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "ai-email": {"title": "AI Copilot: Die echte E-Mail – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-9-email.png\" alt=\"The real, sent email with the approved action\">\n      <a class=\"hotspot\" href=\"#index\" title=\"Back: Portfolio\" data-tour=\"8\" style=\"left:0%; top:2%; width:100%; height:20%;\"><\/a>\n    <\/div>\n  <\/div>", "active": null}, "ai-insight": {"title": "AI Copilot: AI Insight & NBA – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-3-insight.png\" alt=\"AI Insight with sentiment, interpretation and Next Best Action\">\n      <a class=\"hotspot\" href=\"#ai-review\" title=\"Next: Human Review\" data-tour=\"2\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "ai-qbr": {"title": "AI Copilot: Prepare QBR – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-6-qbr.png\" alt=\"Prepare QBR — AI-Entwurf in drei Stufen\">\n      <a class=\"hotspot\" href=\"#ai-team\" title=\"Next: Team-Priorisierung\" data-tour=\"5\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "ai-review": {"title": "AI Copilot: Human Review – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-4-review.png\" alt=\"Human Review — editable approval form before sending\">\n      <a class=\"hotspot\" href=\"#ai-ask-account\" title=\"Next: Ask about this Account\" data-tour=\"3\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "ai-sheet": {"title": "AI Copilot: Protokoll im Sheet – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-8-sheet.png\" alt=\"Google Sheet log — every approved action is recorded\">\n      <a class=\"hotspot\" href=\"#ai-email\" title=\"Next: the real email\" data-tour=\"7\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": null}, "ai-summary": {"title": "AI Copilot: Executive Summary – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-1-summary.png\" alt=\"Executive Portfolio Summary — AI-generated\">\n      <a class=\"hotspot\" href=\"#ai-ask-portfolio\" title=\"Next: Ask about this Portfolio\" data-tour=\"0\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "ai-team": {"title": "AI Copilot: Team-Priorisierung – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/ai-7-team.png\" alt=\"Team-wide AI prioritization with pattern detection\">\n      <a class=\"hotspot\" href=\"#ai-sheet\" title=\"Next: Sheet log\" data-tour=\"6\" style=\"left:0%; top:95%; width:100%; height:5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "team"}, "features": {"title": "Features – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/8-features.png\" alt=\"Feature Request Overview\">\n      <a class=\"hotspot\" href=\"#trust\" title=\"To: Trust\" data-tour=\"7\" style=\"left:0%; top:39%; width:16%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "features"}, "index": {"title": "Portfolio – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/1-portfolio.png\" alt=\"Portfolio\">\n      <a class=\"hotspot\" href=\"#account\" title=\"To: Account\" data-tour=\"0\" style=\"left:19%; top:94%; width:78%; height:6%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "index"}, "map": {"title": "Map – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/4-map.png\" alt=\"Map\">\n      <a class=\"hotspot\" href=\"#qbrs\" title=\"To: QBRs\" data-tour=\"4\" style=\"left:0%; top:30%; width:16%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "map"}, "matrix": {"title": "Matrix – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/3-matrix.png\" alt=\"Value Matrix\">\n      <a class=\"hotspot\" href=\"#team\" title=\"To: Team\" data-tour=\"2\" style=\"left:0%; top:20.5%; width:16%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "matrix"}, "qbr-review": {"title": "QBR Review – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/7-qbr-review.png\" alt=\"QBR Review — Internal / Customer / Presentation\">\n      <a class=\"hotspot\" href=\"#features\" title=\"To: Features\" data-tour=\"6\" style=\"left:0%; top:34.5%; width:16%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "qbrs"}, "qbrs": {"title": "QBRs – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/6-qbrs.png\" alt=\"QBRs overview with CSM filter\">\n      <a class=\"hotspot\" href=\"#qbr-review\" title=\"To: QBR Review\" data-tour=\"5\" style=\"left:83%; top:29%; width:14%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "qbrs"}, "team": {"title": "Team – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/5-team.png\" alt=\"Team Priorities\">\n      <a class=\"hotspot\" href=\"#map\" title=\"To: Map\" data-tour=\"3\" style=\"left:0%; top:25.5%; width:16%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "team"}, "trust": {"title": "Trust – Customer Success AI | HUB Klickdummy", "main": "<div class=\"slide-frame\">\n    <div class=\"hotspot-layer\">\n      <img src=\"images/9-trust.png\" alt=\"Trust & Guardrails\">\n      <a class=\"hotspot\" href=\"#index\" title=\"Back: Portfolio\" data-tour=\"8\" style=\"left:0%; top:11%; width:16%; height:4.5%;\"><\/a>\n    <\/div>\n  <\/div>", "active": "trust"}, "inbox": {"title": "Customer Intelligence Inbox – Customer Success AI | HUB Klickdummy", "active": "inbox", "main": "<div class=\"slide-frame\"><div class=\"hotspot-layer\"><img src=\"images/live-inbox.png\" alt=\"Customer Intelligence Inbox with a confirmed high-urgency risk from Alpenbank AG\"><a class=\"hotspot\" href=\"#inbox-review\" title=\"To: Review action\" data-tour=\"0\" style=\"left:19.52%; top:55.68%; width:8.10%; height:3.95%;\"><\/a><\/div><\/div>"}, "inbox-review": {"title": "Email Flow: Human Review – Customer Success AI | HUB Klickdummy", "active": "inbox", "main": "<div class=\"slide-frame\"><div class=\"hotspot-layer\"><img src=\"images/live-review.png\" alt=\"Gate 2 review form with the AI suggestion, recommended action and rationale\"><a class=\"hotspot\" href=\"#inbox-sent\" title=\"To: Confirm and send to workflow\" data-tour=\"0\" style=\"left:26.62%; top:82.22%; width:14.04%; height:3.95%;\"><\/a><\/div><\/div>"}, "inbox-sent": {"title": "Email Flow: Sent to n8n – Customer Success AI | HUB Klickdummy", "active": "inbox", "main": "<div class=\"slide-frame\"><div class=\"hotspot-layer\"><img src=\"images/live-sent.png\" alt=\"Inbox card after approval: reviewed by CSM and sent to the n8n workflow\"><a class=\"hotspot\" href=\"#inbox-internal-mail\" title=\"To: The internal summary mail\" data-tour=\"0\" style=\"left:19.29%; top:53.09%; width:20.83%; height:2.72%;\"><\/a><\/div><\/div>"}, "inbox-internal-mail": {"title": "Email Flow: Internal Summary – Customer Success AI | HUB Klickdummy", "active": "inbox", "main": "<div class=\"slide-frame\" style=\"max-width:560px\"><div class=\"hotspot-layer\"><img src=\"images/live-internal-mail.png\" alt=\"Internal action approved email created by n8n\"><a class=\"hotspot\" href=\"#inbox-customer-reply\" title=\"To: The prepared customer reply\" data-tour=\"0\" style=\"left:0.00%; top:0.00%; width:100.00%; height:100.00%;\"><\/a><\/div><\/div>"}, "inbox-customer-reply": {"title": "Email Flow: Customer Reply – Customer Success AI | HUB Klickdummy", "active": "inbox", "main": "<div class=\"slide-frame\" style=\"max-width:560px\"><div class=\"hotspot-layer\"><img src=\"images/live-customer-reply.png\" alt=\"Prepared customer reply received in the test mailbox\"><a class=\"hotspot\" href=\"#inbox\" title=\"Back to the Inbox\" data-tour=\"0\" style=\"left:0.00%; top:0.00%; width:100.00%; height:100.00%;\"><\/a><\/div><\/div>"}};
+  var TOURS = {"product": [{"page": "index", "title": "Monday morning, 35 accounts", "text": "Portfolio overview with KPIs, the Attention Queue (top 3 by priority) and the AI copilot embedded directly — no separate app."}, {"page": "account", "title": "AI Insight — with a real Fact / Interpretation / Risk color code", "text": "Sentiment (fact, neutral) → interpretation (teal) → Next Best Action (risk in red / growth in violet). Every action needs human approval."}, {"page": "matrix", "title": "Value Matrix instead of gut feeling", "text": "Value Realization × Strategic Value — at a glance, which accounts need protecting and which have growth potential."}, {"page": "team", "title": "Team prioritization", "text": "A deterministic ranking by risk, ARR and renewal proximity — the AI only adds a synthesis and a Next Best Action, never the order."}, {"page": "map", "title": "Geographic view", "text": "The whole portfolio by region — for patterns that get lost in a table."}, {"page": "qbrs", "title": "QBRs with CSM filter", "text": "Every account's QBR cadence, overdue ones first. Clicking \"Open QBR\" opens that customer's QBR copilot directly."}, {"page": "qbr-review", "title": "Three governed tiers: Internal · Customer · Presentation", "text": "The AI drafts each tier. Internal language (Health Score, risk) never automatically leaves the Internal column — the customer version and presentation version must be reviewed and edited by the CSM."}, {"page": "features", "title": "Feature requests weighted by ARR", "text": "Which requests come up most often — and how much revenue at risk sits behind them. Ready to use for the product team."}, {"page": "trust", "title": "Guardrails are not fine print", "text": "A hard rule against growth actions on high-risk accounts, human-in-the-loop before every send, EU AI Act readiness tracking. That was the tour!"}], "ai": [{"page": "ai-summary", "title": "Executive Portfolio Summary — at the click of a button", "text": "Clicking \"Load Executive Summary\" summarizes the whole filtered portfolio: what needs attention, why, and the top 3 priorities this week — every statement with a \"View accounts →\" link to the real accounts behind it."}, {"page": "ai-ask-portfolio", "title": "\"Ask about this Portfolio\" — free-text questions on the data", "text": "Instead of filtering and clicking: a plain-language question (\"Which accounts need attention before their renewal?\") — the answer stays strictly limited to the accounts currently in view."}, {"page": "ai-insight", "title": "AI Insight & Next Best Action — per account", "text": "Sentiment (fact) → interpretation → exactly ONE concrete Next Best Action with a rationale, not a to-do list. Evidence confidence shows how solid the underlying data is."}, {"page": "ai-review", "title": "Human-in-the-loop — nothing goes out unreviewed", "text": "\"Review action\" opens an editable form: category, action text and rationale can be adjusted before sending. Only \"Confirm & Send to Workflow\" triggers the real n8n workflow."}, {"page": "ai-ask-account", "title": "Asking follow-up questions about a single customer", "text": "Every account has its own ask box — here, \"What is driving the low CSAT?\" — answered strictly from the notes, tickets and metrics stored for this one account."}, {"page": "ai-qbr", "title": "Prepare QBR — the copilot writes the first draft", "text": "Clicking \"Prepare QBR\" instantly generates three versions (internal / customer / presentation) for each of the twelve QBR sections — ready for review, never sent automatically."}, {"page": "ai-team", "title": "Team-wide prioritization with pattern detection", "text": "The AI never reorders the ranking (it is deterministic), but adds a synthesis and a Next Best Action to every top account — and here it even spots a pattern across several accounts (recurring SSO outages)."}, {"page": "ai-sheet", "title": "Proof: every approval gets logged", "text": "After \"Confirm & Send to Workflow\", n8n automatically writes a row to the Google Sheet — including the CSM's own addition from the review form (point \"d\"). Nothing disappears unobserved."}, {"page": "ai-email", "title": "Proof: the real email arrives", "text": "The same workflow also sends an email (currently to the CSM themselves, simulating the later summary) — with the exact same text the CSM approved. That was the AI Feature Tour!"}], "email": [{"page": "inbox", "title": "A customer email becomes a signal", "text": "A real email from a customer was read and classified by the AI as a high-urgency risk. A CSM has confirmed the account (Gate 1), so the health effect of -10 points is now applied. Nothing has been sent to anyone yet."}, {"page": "inbox-review", "title": "Gate 2: the CSM reviews and approves", "text": "The CSM reads the AI's recommendation, edits the action and the rationale if needed, and confirms. This is the only way the approval workflow in n8n can start."}, {"page": "inbox-sent", "title": "The workflow has run", "text": "The card records that a person approved the action and that the n8n workflow ran: an audit row in Google Sheets, an internal summary and the prepared customer reply."}, {"page": "inbox-internal-mail", "title": "Internal summary", "text": "n8n sends the approved action to the team mailbox, with the account, the CSM, the recommended action and the rationale."}, {"page": "inbox-customer-reply", "title": "Prepared customer reply", "text": "The AI drafted this reply together with the classification. In this demo it goes to a test mailbox that stands in for the customer. In production it would be created as a draft that the CSM edits and sends. That was the email flow."}]};
+  var START = "index";
+  var DEFAULT_TOUR = "product";
+  var stage = document.getElementById("stage");
+  var navLinks = document.getElementById("navLinks");
+  var tour = { name: null, step: 0 }, current = null;
+
+  function removeTourUI() {
+    var s = document.getElementById("tourSpotlight"); if (s) s.remove();
+    var t = document.getElementById("tourTooltip"); if (t) t.remove();
+    if (window._tourPos) { window.removeEventListener("resize", window._tourPos); window.removeEventListener("scroll", window._tourPos, true); }
+    window._tourPos = null;
+  }
+  function endTour() { tour.name = null; removeTourUI(); }
+
+  function render(id, fromHash) {
+    if (!PAGES[id]) id = START;
+    current = id;
+    var p = PAGES[id];
+    document.title = p.title;
+    stage.innerHTML = p.main;
+    Array.prototype.forEach.call(stage.querySelectorAll("a[href^='#']"), function (a) {
+      var to = a.getAttribute("href").slice(1);
+      a.addEventListener("click", function (e) { e.preventDefault(); if (tour.name) { advance(); } else { go(to); } });
+    });
+    Array.prototype.forEach.call(navLinks.querySelectorAll("a"), function (a) {
+      a.classList.toggle("active", a.getAttribute("data-page") === p.active);
+    });
+    if (window.afterRender) window.afterRender(id);
+    window.scrollTo(0, 0);
+    var shot = stage.querySelector("img");
+    var ready = function () { if (tour.name) renderStep(); };
+    if (shot && !shot.complete) { shot.addEventListener("load", ready); } else { ready(); }
+    if (!fromHash && location.hash.slice(1) !== id) { try { history.replaceState(null, "", "#" + id); } catch (e) {} }
+  }
+  function go(id) { removeTourUI(); render(id, false); }
+
+  function steps() { return TOURS[tour.name] || []; }
+  function startTour(name) {
+    name = TOURS[name] ? name : DEFAULT_TOUR;
+    tour.name = name; tour.step = 0;
+    removeTourUI();
+    render(steps()[0].page, false);
+  }
+  function advance() {
+    tour.step += 1;
+    if (tour.step >= steps().length) { endTour(); return; }
+    removeTourUI();
+    render(steps()[tour.step].page, false);
+  }
+  function renderStep() {
+    removeTourUI();
+    var list = steps(), step = list[tour.step];
+    if (!step) return;
+    var target = stage.querySelector("[data-tour]");
+    if (!target) return;
+    if (target.tagName !== "A" && !target._tourBound) {
+      target._tourBound = true;
+      target.addEventListener("click", function (e) {
+        if (!tour.name || /^(INPUT|LABEL|BUTTON)$/.test(e.target.tagName)) return;
+        advance();
+      });
+    }
+    var spotlight = document.createElement("div");
+    spotlight.id = "tourSpotlight"; spotlight.className = "tour-spotlight";
+    document.body.appendChild(spotlight);
+    var tip = document.createElement("div");
+    tip.id = "tourTooltip"; tip.className = "tour-tooltip";
+    var last = tour.step === list.length - 1;
+    tip.innerHTML = '<div class="tour-tooltip-step">Step ' + (tour.step + 1) + ' / ' + list.length + '</div>' +
+      '<div class="tour-tooltip-title">' + step.title + '</div>' +
+      '<p class="tour-tooltip-text">' + step.text + '</p>' +
+      '<div class="tour-tooltip-actions">' +
+      '<button type="button" class="tour-btn tour-btn-ghost" id="tourEndBtn">End tour</button>' +
+      '<button type="button" class="tour-btn tour-btn-primary" id="tourNextBtn">' + (last ? "Done" : "Next &rarr;") + '</button></div>';
+    document.body.appendChild(tip);
+    document.getElementById("tourEndBtn").addEventListener("click", endTour);
+    document.getElementById("tourNextBtn").addEventListener("click", advance);
+    function position() {
+      var r = target.getBoundingClientRect(), pad = 8;
+      spotlight.style.top = (r.top - pad) + "px"; spotlight.style.left = (r.left - pad) + "px";
+      spotlight.style.width = (r.width + pad * 2) + "px"; spotlight.style.height = (r.height + pad * 2) + "px";
+      var tw = tip.offsetWidth, th = tip.offsetHeight, top = r.bottom + pad + 12;
+      if (top + th > window.innerHeight - 10) top = Math.max(10, r.top - th - pad - 12);
+      top = Math.min(Math.max(10, top), Math.max(10, window.innerHeight - th - 10));
+      tip.style.top = top + "px";
+      tip.style.left = Math.min(Math.max(r.left, 10), window.innerWidth - tw - 10) + "px";
+    }
+    window._tourPos = position;
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    try { target.scrollIntoView({ behavior: "auto", block: "center" }); } catch (e) {}
+    position(); setTimeout(position, 320);
+  }
+
+  Array.prototype.forEach.call(navLinks.querySelectorAll("a"), function (a) {
+    a.addEventListener("click", function (e) { e.preventDefault(); endTour(); go(a.getAttribute("data-page")); navLinks.classList.remove("is-open"); });
+  });
+  document.getElementById("brandLink").addEventListener("click", function (e) { e.preventDefault(); endTour(); go(START); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-tour-start]"), function (b) {
+    b.addEventListener("click", function () { startTour(b.getAttribute("data-tour-start")); });
+  });
+  var tb = document.getElementById("navToggleBtn");
+  tb.addEventListener("click", function () { var o = navLinks.classList.toggle("is-open"); tb.classList.toggle("is-active", o); tb.setAttribute("aria-expanded", o ? "true" : "false"); });
+  var fs = document.getElementById("fullscreenBtn");
+  fs.addEventListener("click", function () {
+    var el = document.documentElement, r;
+    try { r = document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen(); } catch (e) {}
+    if (r && r.catch) r.catch(function () {});
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && tour.name) endTour(); });
+  window.addEventListener("hashchange", function () {
+    var h = location.hash.slice(1);
+    if (h.indexOf("tour") === 0) return;
+    if (PAGES[h] && h !== current) { endTour(); render(h, true); }
+  });
+
+  var h0 = location.hash.slice(1);
+  if (h0.indexOf("tour") === 0) {
+    startTour(h0.length > 5 ? h0.slice(5) : DEFAULT_TOUR);
+  } else {
+    render(PAGES[h0] ? h0 : START, true);
+  }
+})();
+</script>
+
+</body></html>
+</body>
+</html>
